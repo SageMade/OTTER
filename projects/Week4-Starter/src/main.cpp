@@ -79,8 +79,7 @@ bool initGLFW() {
 	//Create a new GLFW window and make it current
 	window = glfwCreateWindow(windowSize.x, windowSize.y, windowTitle.c_str(), nullptr, nullptr);
 	glfwMakeContextCurrent(window);
-		
-
+	
 	// Set our window resized callback
 	glfwSetWindowSizeCallback(window, GlfwWindowResizedCallback);
 
@@ -112,6 +111,7 @@ int main() {
 
 	// Let OpenGL know that we want debug output, and route it to our handler function
 	glEnable(GL_DEBUG_OUTPUT);
+	glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
 	glDebugMessageCallback(GlDebugMessage, nullptr);
 
 	static const GLfloat points[] = {
@@ -174,11 +174,15 @@ int main() {
 
 	// GL states
 	glEnable(GL_DEPTH_TEST);
-
 	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
-	GLint xTransformLoc = glGetUniformLocation(shader->GetHandle(), "u_ModelViewProjection");
+	// Create a mat4 to store our mvp (for now)
 	glm::mat4 transform = glm::mat4(1.0f);
+	glm::mat4 transform2 = glm::mat4(1.0f);
+
+	Camera::Sptr camera = Camera::Create();
+	camera->SetPosition(glm::vec3(0, 1, 1));
+	camera->LookAt(glm::vec3(0.0f));
 
 	// Our high-precision timer
 	double lastFrame = glfwGetTime();
@@ -191,18 +195,22 @@ int main() {
 		double thisFrame = glfwGetTime();
 		float dt = static_cast<float>(thisFrame - lastFrame);
 
+		// Rotate our models around the z axis
 		transform = glm::rotate(glm::mat4(1.0f), static_cast<float>(thisFrame), glm::vec3(0, 0, 1));
+		transform2 = glm::translate(glm::mat4(1.0f), glm::vec3(0, 0.0f, glm::sin(static_cast<float>(thisFrame))));
 
 		glClearColor(0.2f, 0.2f, 0.2f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+		// Bind our shader and upload the uniform
 		shader->Bind();
-		glProgramUniformMatrix4fv(shader->GetHandle(), xTransformLoc, 1, false, glm::value_ptr(transform));
+		shader->SetUniformMatrix("u_ModelViewProjection", camera->GetViewProjection() * transform);
 
 		vao->Bind();
 		glDrawArrays(GL_TRIANGLES, 0, 3);
 		vao->Unbind();
 
+		shader->SetUniformMatrix("u_ModelViewProjection", camera->GetViewProjection() * transform2);
 		vao2->Bind();
 		glDrawElements(GL_TRIANGLES, interleaved_ibo->GetElementCount(), (GLenum)interleaved_ibo->GetElementType(), nullptr);
 

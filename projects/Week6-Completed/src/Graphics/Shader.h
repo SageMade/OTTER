@@ -1,6 +1,11 @@
 #pragma once
 #include <glad/glad.h>
 #include <memory>
+#include <string>               // for std::string
+#include <unordered_map>        // for std::unordered_map
+#include <GLM/glm.hpp>          // for our GLM types
+#include <GLM/gtc/type_ptr.hpp> // for glm::value_ptr
+#include "Logging.h"            // for the logging functions
 
 // We can use an enum to make our code more readable and restrict
 // values to only ones we want to accept
@@ -72,6 +77,41 @@ public:
 	/// Gets the underlying OpenGL handle that this class is wrapping
 	/// </summary>
 	GLuint GetHandle() const { return _handle; }
+
+public:
+	void SetUniformMatrix(int location, const glm::mat3* value, int count = 1, bool transposed = false);
+	void SetUniformMatrix(int location, const glm::mat4* value, int count = 1, bool transposed = false);
+	void SetUniform(int location, const float* value, int count = 1);
+	void SetUniform(int location, const glm::vec2* value, int count = 1);
+	void SetUniform(int location, const glm::vec3* value, int count = 1);
+	void SetUniform(int location, const glm::vec4* value, int count = 1);
+	void SetUniform(int location, const int* value, int count = 1);
+	void SetUniform(int location, const glm::ivec2* value, int count = 1);
+	void SetUniform(int location, const glm::ivec3* value, int count = 1);
+	void SetUniform(int location, const glm::ivec4* value, int count = 1);
+	void SetUniform(int location, const bool* value, int count = 1);
+	void SetUniform(int location, const glm::bvec2* value, int count = 1);
+	void SetUniform(int location, const glm::bvec3* value, int count = 1);
+	void SetUniform(int location, const glm::bvec4* value, int count = 1);
+
+	template <typename T>
+	void SetUniform(const std::string& name, const T& value) {
+		int location = __GetUniformLocation(name);
+		if (location != -1) {
+			SetUniform(location, &value, 1);
+		} else {
+			LOG_WARN("Ignoring uniform \"{}\"", name);
+		}
+	}
+	template <typename T>
+	void SetUniformMatrix(const std::string& name, const T& value, bool transposed = false) {
+		int location = __GetUniformLocation(name);
+		if (location != -1) {
+			SetUniformMatrix(location, &value, 1, transposed);
+		} else {
+			LOG_WARN("Ignoring uniform \"{}\"", name);
+		}
+	}
 	
 protected:
 	// Stores the vertex and fragment shader handles
@@ -80,4 +120,8 @@ protected:
 	
 	// Stores the shader program handle
 	GLuint _handle;
+
+	// Map and access to look up uniform locations
+	std::unordered_map<std::string, int> _uniformLocs;
+	int __GetUniformLocation(const std::string& name);
 };

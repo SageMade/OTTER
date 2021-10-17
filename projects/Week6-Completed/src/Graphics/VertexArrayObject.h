@@ -2,12 +2,37 @@
 #include <glad/glad.h>
 #include <cstdint>
 #include <vector>
+#include <memory>
 
 // We can declare the classes for IndexBuffer and VertexBuffer here, since we don't need their full definitions in the .h file
 #include "VertexBuffer.h"
 #include "IndexBuffer.h"
 
 #include <memory>
+
+/// <summary>
+/// We'll use this just to make it more clear what the intended usage of an attribute is in our code!
+/// </summary>
+enum class AttribUsage
+{
+	Unknown = 0,
+	Position,
+	Color,
+	Color1,   //
+	Color2,   // Extras
+	Color3,   //
+	Texture,
+	Texture1, //
+	Texture2, // Extras
+	Texture3, //
+	Normal,
+	Tangent,
+	BiNormal,
+	User0,    //
+	User1,    //
+	User2,    // Extras
+	User3     //
+};
 
 /// <summary>
 /// Represents the type that a VAO attribute can have
@@ -23,6 +48,20 @@ enum class AttributeType {
 	Float   = GL_FLOAT,
 	Double  = GL_DOUBLE,
 	Unknown = GL_NONE
+};
+
+/// <summary>
+/// Represents the mode in which a VAO will be drawn
+/// </summary>
+/// <see>https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/glDrawArrays.xhtml</see>
+enum class DrawMode {
+	Points = GL_POINTS,
+	LineStrip = GL_LINE_STRIP,
+	LineLoop = GL_LINE_LOOP,
+	LineList = GL_LINES,
+	TriangleStrip = GL_TRIANGLE_STRIP,
+	TriangleFan = GL_TRIANGLE_FAN,
+	TriangleList = GL_TRIANGLES
 };
 
 /// <summary>
@@ -54,9 +93,13 @@ struct BufferAttribute
 	/// The offset from the start of an element to this attribute
 	/// </summary>
 	GLsizei Offset;
+	/// <summary>
+	/// A hint for how the vertex attribute may be used (useful for our own code)
+	/// </summary>
+	AttribUsage Usage;
 
-	BufferAttribute(uint32_t slot, uint32_t size, AttributeType type, GLsizei stride, GLsizei offset, bool normalized = false) :
-		Slot(slot), Size(size), Type(type), Stride(stride), Offset(offset), Normalized(normalized) { }
+	BufferAttribute(uint32_t slot, uint32_t size, AttributeType type, GLsizei stride, GLsizei offset, AttribUsage usage, bool normalized = false) :
+		Slot(slot), Size(size), Type(type), Stride(stride), Offset(offset), Usage(usage), Normalized(normalized) { }
 };
 
 /// <summary>
@@ -67,9 +110,9 @@ class VertexArrayObject final
 public:
 	typedef std::shared_ptr<VertexArrayObject> Sptr;
 
-	static inline Sptr Create(){
+	static inline Sptr Create() {
 		return std::make_shared<VertexArrayObject>();
-	};
+	}
 
 	// We'll disallow moving and copying, since we want to manually control when the destructor is called
 	// We'll use these classes via pointers
@@ -98,10 +141,13 @@ public:
 	/// <param name="attributes">A list of vertex attributes that will be fed by this buffer</param>
 	void AddVertexBuffer(const VertexBuffer::Sptr& buffer, const std::vector<BufferAttribute>& attributes);
 
+	void Draw(DrawMode mode = DrawMode::TriangleList);
+
 	/// <summary>
 	/// Binds this VAO as the source of data for draw operations
 	/// </summary>
 	void Bind();
+
 	/// <summary>
 	/// Unbinds the currently bound VAO
 	/// </summary>
@@ -124,6 +170,8 @@ protected:
 	IndexBuffer::Sptr _indexBuffer;
 	// The vertex buffers bound to this VAO
 	std::vector<VertexBufferBinding> _vertexBuffers;
+
+	uint32_t _vertexCount;
 
 	// The underlying OpenGL handle that this class is wrapping around
 	GLuint _handle;

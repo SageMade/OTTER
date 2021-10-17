@@ -26,7 +26,6 @@ public:
 		return std::make_shared<IndexBuffer>(usage);
 	}
 
-
 	/// <summary>
 	/// Creates a new index buffer, with the given usage. Data will still need to be uploaded before it can be used
 	/// </summary>

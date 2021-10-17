@@ -10,6 +10,10 @@ class VertexBuffer : public IBuffer
 public:
 	typedef std::shared_ptr<VertexBuffer> Sptr;
 
+	static inline Sptr Create(BufferUsage usage = BufferUsage::StaticDraw) {
+		return std::make_shared<VertexBuffer>(usage);
+	}
+
 	/// <summary>
 	/// Creates a new vertex buffer, with the given usage. Data will still need to be uploaded before it can be used
 	/// </summary>
@@ -20,9 +24,5 @@ public:
 	/// Unbinds the current vertex buffer
 	/// </summary>
 	static void UnBind() { IBuffer::UnBind(BufferType::Vertex); }
-
-	static inline Sptr Create(BufferUsage usage = BufferUsage::StaticDraw) {
-		return std::make_shared<VertexBuffer>(usage);
-	}
 };
 

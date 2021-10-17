@@ -66,10 +66,9 @@ class VertexArrayObject final
 {
 public:
 	typedef std::shared_ptr<VertexArrayObject> Sptr;
-
-	static inline Sptr Create(){
+	static inline Sptr Create() {
 		return std::make_shared<VertexArrayObject>();
-	};
+	}
 
 	// We'll disallow moving and copying, since we want to manually control when the destructor is called
 	// We'll use these classes via pointers

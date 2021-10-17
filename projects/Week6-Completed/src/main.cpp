@@ -12,11 +12,17 @@
 #include <GLM/gtc/matrix_transform.hpp>
 #include <GLM/gtc/type_ptr.hpp>
 
-#include "IndexBuffer.h"
-#include "VertexBuffer.h"
-#include "VertexArrayObject.h"
-#include "Shader.h"
+#include "Graphics/IndexBuffer.h"
+#include "Graphics/VertexBuffer.h"
+#include "Graphics/VertexArrayObject.h"
+#include "Graphics/Shader.h"
+#include "Graphics/Texture2D.h"
 #include "Camera.h"
+
+#include "Utils/MeshBuilder.h"
+#include "Utils/MeshFactory.h"
+#include "Utils/ObjLoader.h"
+#include "Graphics/VertexTypes.h"
 
 #define LOG_GL_NOTIFICATIONS
 
@@ -79,8 +85,7 @@ bool initGLFW() {
 	//Create a new GLFW window and make it current
 	window = glfwCreateWindow(windowSize.x, windowSize.y, windowTitle.c_str(), nullptr, nullptr);
 	glfwMakeContextCurrent(window);
-		
-
+	
 	// Set our window resized callback
 	glfwSetWindowSizeCallback(window, GlfwWindowResizedCallback);
 
@@ -112,6 +117,7 @@ int main() {
 
 	// Let OpenGL know that we want debug output, and route it to our handler function
 	glEnable(GL_DEBUG_OUTPUT);
+	glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
 	glDebugMessageCallback(GlDebugMessage, nullptr);
 
 	static const GLfloat points[] = {
@@ -135,10 +141,10 @@ int main() {
 
 	VertexArrayObject::Sptr vao = VertexArrayObject::Create();
 	vao->AddVertexBuffer(posVbo, {
-		BufferAttribute(0, 3, AttributeType::Float, 0, NULL)
+		BufferAttribute(0, 3, AttributeType::Float, 0, NULL, AttribUsage::Position)
 	});
 	vao->AddVertexBuffer(color_vbo, {
-		{ 1, 3, AttributeType::Float, 0, NULL }
+		{ 1, 3, AttributeType::Float, 0, NULL, AttribUsage::Color }
 	});
 
 	static const float interleaved[] = {
@@ -161,27 +167,72 @@ int main() {
 	size_t stride = sizeof(float) * 6;
 	VertexArrayObject::Sptr vao2 = VertexArrayObject::Create();
 	vao2->AddVertexBuffer(interleaved_vbo, {
-		BufferAttribute(0, 3, AttributeType::Float, stride, 0),
-		BufferAttribute(1, 3, AttributeType::Float, stride, sizeof(float) * 3),
+		BufferAttribute(0, 3, AttributeType::Float, stride, 0, AttribUsage::Position),
+		BufferAttribute(1, 3, AttributeType::Float, stride, sizeof(float) * 3, AttribUsage::Color),
 	});
 	vao2->SetIndexBuffer(interleaved_ibo);
 
 	// Load our shaders
-	Shader::Sptr shader = Shader::Create();
+	Shader* shader = new Shader();
 	shader->LoadShaderPartFromFile("shaders/vertex_shader.glsl", ShaderPartType::Vertex);
-	shader->LoadShaderPartFromFile("shaders/frag_shader.glsl", ShaderPartType::Fragment);
+	shader->LoadShaderPartFromFile("shaders/frag_blinn_phong_textured.glsl", ShaderPartType::Fragment);
 	shader->Link();
 
-	// GL states
+	// Set up our material parameters
+	shader->Bind();
+	shader->SetUniform("u_AmbientCol", glm::vec3(1.0f, 1.0f, 1.0f));
+	shader->SetUniform("u_AmbientStrength", 0.1f);
+
+	shader->SetUniform("u_LightPos", glm::vec3(0.0f, 0.0f, 1.0f));
+	shader->SetUniform("u_LightCol", glm::vec3(1.0f, 0.0f, 1.0f));
+
+	shader->SetUniform("u_AmbientLightStrength",  0.25f);
+	shader->SetUniform("u_SpecularLightStrength", 1.0f);
+	shader->SetUniform("u_Shininess",             8.0f);
+
+	shader->SetUniform("u_LightAttenuationConstant",  1.0f);
+	shader->SetUniform("u_LightAttenuationLinear",    0.07f);
+	shader->SetUniform("u_LightAttenuationQuadratic", 0.017f);
+
+	// For textures, we pass the *slot* that the texture sure draw from
+	shader->SetUniform("s_Diffuse", 0);
+	shader->SetUniform("s_Specular", 1);
+
+	// Load in the textures for our material
+	Texture2D::Sptr diffuse  = Texture2D::LoadFromFile("textures/box-diffuse.png");
+	Texture2D::Sptr specular = Texture2D::LoadFromFile("textures/box-specular.png");
+
+	// GL states, we'll enable depth testing and backface fulling
 	glEnable(GL_DEPTH_TEST);
+	glEnable(GL_CULL_FACE);
+	glCullFace(GL_BACK);
+	glClearColor(0.2f, 0.2f, 0.2f, 1.0f);
 
-	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+	// Get uniform location for the model view projection
+	Camera::Sptr camera = Camera::Create();
+	camera->SetPosition(glm::vec3(0, 2, 2));
+	camera->LookAt(glm::vec3(0.0f));
 
-	GLint xTransformLoc = glGetUniformLocation(shader->GetHandle(), "u_ModelViewProjection");
+	// Create a mat4 to store our mvp (for now)
 	glm::mat4 transform = glm::mat4(1.0f);
+	glm::mat4 transform2 = glm::mat4(1.0f);
+	glm::mat4 transform3 = glm::mat4(1.0f);
 
 	// Our high-precision timer
 	double lastFrame = glfwGetTime();
+
+	LOG_INFO("Starting mesh build");
+
+	MeshBuilder<VertexPosNormTexCol> mesh;
+	MeshFactory::AddIcoSphere(mesh, glm::vec3(1.0f, 0.0f, 0.0f), glm::vec3(0.5f), 3);
+	MeshFactory::AddCube(mesh, glm::vec3(0.0f), glm::vec3(0.5f));
+	VertexArrayObject::Sptr vao3 = mesh.Bake();
+
+	VertexArrayObject::Sptr vao4 = ObjLoader::LoadFromFile("Monkey.obj");
+
+	bool isRotating = true;
+
+	bool isButtonPressed = false;
 
 	///// Game loop /////
 	while (!glfwWindowShouldClose(window)) {
@@ -191,20 +242,54 @@ int main() {
 		double thisFrame = glfwGetTime();
 		float dt = static_cast<float>(thisFrame - lastFrame);
 
-		transform = glm::rotate(glm::mat4(1.0f), static_cast<float>(thisFrame), glm::vec3(0, 0, 1));
+		// TODO: Week 5 - toggle code
 
-		glClearColor(0.2f, 0.2f, 0.2f, 1.0f);
+		// WEEK 5: Input handling
+		if (glfwGetKey(window, GLFW_KEY_W)) {
+			if (!isButtonPressed) {
+				isRotating = !isRotating;
+			}
+			isButtonPressed = true;
+		} else {
+			isButtonPressed = false;
+		}
+
+		// Rotate our models around the z axis
+		if (isRotating) {
+			transform  = glm::rotate(glm::mat4(1.0f), static_cast<float>(thisFrame), glm::vec3(0, 0, 1));
+		}
+		transform2 = glm::rotate(glm::mat4(1.0f), -static_cast<float>(thisFrame), glm::vec3(0, 0, 1)) * glm::translate(glm::mat4(1.0f), glm::vec3(0, 0.0f, glm::sin(static_cast<float>(thisFrame))));
+		transform3 = glm::rotate(glm::mat4(1.0f), -static_cast<float>(thisFrame), glm::vec3(1, 0, 0)) * glm::translate(glm::mat4(1.0f), glm::vec3(0, glm::sin(static_cast<float>(thisFrame)), 0.0f));
+
+		// Clear the color and depth buffers
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+		// Bind our shader and upload the uniform
 		shader->Bind();
-		glProgramUniformMatrix4fv(shader->GetHandle(), xTransformLoc, 1, false, glm::value_ptr(transform));
 
-		vao->Bind();
-		glDrawArrays(GL_TRIANGLES, 0, 3);
-		vao->Unbind();
+		// Bind our material textures to the slots we specified earlier
+		diffuse->Bind(0);
+		specular->Bind(1);
 
-		vao2->Bind();
-		glDrawElements(GL_TRIANGLES, interleaved_ibo->GetElementCount(), (GLenum)interleaved_ibo->GetElementType(), nullptr);
+		shader->SetUniform("u_CamPos", camera->GetPosition());
+
+		// Draw spinny triangle
+		shader->SetUniformMatrix("u_ModelViewProjection", camera->GetViewProjection() * transform);
+		shader->SetUniformMatrix("u_Model", transform);
+		shader->SetUniformMatrix("u_NormalMatrix", glm::mat3(glm::transpose(glm::inverse(transform))));
+		vao->Draw();
+
+		// Draw MeshFactory Sample
+		shader->SetUniformMatrix("u_ModelViewProjection", camera->GetViewProjection()* transform2);
+		shader->SetUniformMatrix("u_Model", transform2);
+		shader->SetUniformMatrix("u_NormalMatrix", glm::mat3(glm::transpose(glm::inverse(transform2))));
+		vao3->Draw();
+
+		// Draw OBJ loaded model
+		shader->SetUniformMatrix("u_ModelViewProjection", camera->GetViewProjection()* transform3);
+		shader->SetUniformMatrix("u_Model", transform3);
+		shader->SetUniformMatrix("u_NormalMatrix", glm::mat3(glm::transpose(glm::inverse(transform3))));
+		vao4->Draw();
 
 		VertexArrayObject::Unbind();
 

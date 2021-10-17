@@ -1,10 +1,12 @@
 #include "VertexArrayObject.h"
 #include "IndexBuffer.h"
 #include "VertexBuffer.h"
+#include "Logging.h"
 
 VertexArrayObject::VertexArrayObject() :
 	_indexBuffer(nullptr),
 	_handle(0),
+	_vertexCount(0),
 	_vertexBuffers(std::vector<VertexBufferBinding>())
 {
 	glCreateVertexArrays(1, &_handle);
@@ -29,11 +31,17 @@ void VertexArrayObject::SetIndexBuffer(const IndexBuffer::Sptr& ibo) {
 
 void VertexArrayObject::AddVertexBuffer(const VertexBuffer::Sptr& buffer, const std::vector<BufferAttribute>& attributes)
 {
-	// TODO: Who should own this buffer now? Do we delete it when we destroy?
+	if (_vertexBuffers.size() == 0) {
+		_vertexCount = buffer->GetElementCount();
+	} else if (buffer->GetElementCount() != _vertexCount) {
+		LOG_WARN("Buffer element count does not match vertex count of this VAO!!!");
+	}
+
 	VertexBufferBinding binding;
 	binding.Buffer = buffer;
 	binding.Attributes = attributes;
 	_vertexBuffers.push_back(binding);
+
 
 	Bind();
 	buffer->Bind();
@@ -41,6 +49,16 @@ void VertexArrayObject::AddVertexBuffer(const VertexBuffer::Sptr& buffer, const 
 		glEnableVertexArrayAttrib(_handle, attrib.Slot);
 		glVertexAttribPointer(attrib.Slot, attrib.Size, (GLenum)attrib.Type, attrib.Normalized, attrib.Stride,
 							  (void*)attrib.Offset);
+	}
+	Unbind();
+}
+
+void VertexArrayObject::Draw(DrawMode mode) {
+	Bind();
+	if (_indexBuffer == nullptr) {
+		glDrawArrays((GLenum)mode, 0, _vertexCount);
+	} else {
+		glDrawElements((GLenum)mode, _indexBuffer->GetElementCount(), (GLenum)_indexBuffer->GetElementType(), nullptr);
 	}
 	Unbind();
 }
