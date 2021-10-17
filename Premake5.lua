@@ -1,5 +1,5 @@
 -- Ontario Tech Teaching and Education Repository (OTTER) Framework
--- Shawn Matthews (Jan 1st, 2020)
+-- Sage Matthews (Jan 1st, 2020)
 
 -- This premake file sets up an easy to use framework for developing graphics applications, and allows easy addition
 -- of other frameworks and libraries where required.
@@ -92,6 +92,9 @@ ProjIncludes = {
 	"dependencies/tinyGLTF",
 	"dependencies/json",
 	"dependencies/bullet3/include",
+	"dependencies/bento/include",
+	"dependencies/ffmpeg/include",
+	"dependencies/jack/include",
 }
 
 -- These are all the default dependencies that require linking
@@ -100,10 +103,26 @@ Dependencies = {
 	"Glad",
 	"stbs",
 	"ImGui",
+	"winmm.lib",
+	"dsound.lib",
+	"ole32.lib",
+	"MF.lib",
+	"Mfplat.lib",
+	"mfreadwrite",
+	"mfuuid",
+	"strmbase",
 	"opengl32.lib",
 	"imagehlp.lib",
 	"dependencies/gzip/zlib.lib",
 	"tinyGLTF",
+	"dependencies/ffmpeg/lib/avcodec.lib",
+	"dependencies/ffmpeg/lib/avdevice.lib",
+	"dependencies/ffmpeg/lib/avfilter.lib",
+	"dependencies/ffmpeg/lib/avformat.lib",
+	"dependencies/ffmpeg/lib/avutil.lib",
+	"dependencies/ffmpeg/lib/swresample.lib",
+	"dependencies/ffmpeg/lib/swscale.lib",
+	"dependencies/jack/lib/libjack64.lib",
 }
 
 DependenciesDebug = {
@@ -115,6 +134,7 @@ DependenciesDebug = {
 	"dependencies/bullet3/lib/LinearMath_Debug.lib",
 	"dependencies/fmod/lib/fmodstudioL_vc.lib",
 	"dependencies/fmod/lib/fmodL_vc.lib",
+	"dependencies/bento/lib/Bento4D.lib",
 }
 
 DependenciesRelease = {
@@ -126,6 +146,7 @@ DependenciesRelease = {
 	"dependencies/bullet3/lib/LinearMath.lib",
 	"dependencies/fmod/lib/fmodstudio_vc.lib",
 	"dependencies/fmod/lib/fmod_vc.lib",
+	"dependencies/bento/lib/Bento4.lib",
 }
 
 -- These are what we are linking to (mostly other projects)
