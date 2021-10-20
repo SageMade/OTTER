@@ -6,7 +6,8 @@
 #include <ostream>
 #include <unordered_map>
 #include <conio.h>
-#include <BinaryFileWriter.h>
+#include "BinaryFileWriter.h"
+#include "ConsoleUtils.h"
 
 #include <dshow.h>
 #include <mfapi.h>
@@ -56,8 +57,12 @@ std::unordered_map<HRESULT, std::string> InitErrorMap {
 	{ AUDCLNT_E_SERVICE_NOT_RUNNING, "Service not running"}
 };
 
+std::unordered_map<SampleFormat, GUID> SampleFormatMap {
+	{ SampleFormat::Float, MFAudioFormat_Float},
+	{ SampleFormat::PCM, MFAudioFormat_PCM},
+};
 
-void TestWaveAudio(int sampleRate, std::function<void(uint8_t*, size_t)> callback)
+void TestWaveAudio(const AudioInStreamConfig& config, std::function<void(const uint8_t*, size_t)> callback)
 {
 	IMFMediaSource* recordingDevice = nullptr;    // The media source we recording from
 	IMFAttributes* attributes = nullptr;          // Attributes of all audio recording devices (?)
@@ -90,9 +95,7 @@ void TestWaveAudio(int sampleRate, std::function<void(uint8_t*, size_t)> callbac
 		devices[ix]->GetAllocatedString(MF_DEVSOURCE_ATTRIBUTE_FRIENDLY_NAME, &name, &size);
 		std::wcout << ix << ": " << name << std::endl;
 	}
-	std::cout << "Enter device ID: ";
-	int id = 0;
-	std::cin >> id;
+	int id = ConsoleUtils::OptionsMenu(numDevs, "Select Audio Device: ");
 
 	// Activate the recording device for use
 	devices[id]->ActivateObject(IID_PPV_ARGS(&recordingDevice));
@@ -101,10 +104,10 @@ void TestWaveAudio(int sampleRate, std::function<void(uint8_t*, size_t)> callbac
 	MFCreateSourceReaderFromMediaSource(recordingDevice, attributes, &inputReader);
 
 	MFCreateMediaType(&decodingMediaType);
-	decodingMediaType->SetGUID(MF_MT_MAJOR_TYPE, MFMediaType_Audio);
-	decodingMediaType->SetGUID(MF_MT_SUBTYPE, MFAudioFormat_PCM);
-	decodingMediaType->SetUINT32(MF_MT_AUDIO_NUM_CHANNELS, 1);
-	decodingMediaType->SetUINT32(MF_MT_AUDIO_SAMPLES_PER_SECOND, sampleRate);
+	decodingMediaType->SetGUID(MF_MT_MAJOR_TYPE, MFMediaType_Audio); 
+	decodingMediaType->SetGUID(MF_MT_SUBTYPE, SampleFormatMap[config.Format]);
+	decodingMediaType->SetUINT32(MF_MT_AUDIO_NUM_CHANNELS, config.NumChannels);
+	decodingMediaType->SetUINT32(MF_MT_AUDIO_SAMPLES_PER_SECOND, config.SampleRate);
 
 	inputReader->SetCurrentMediaType(mediaStreamIndex, nullptr, decodingMediaType);
 	
@@ -168,7 +171,7 @@ const IID IID_IMMDeviceEnumerator = __uuidof(IMMDeviceEnumerator);
 const IID IID_IAudioClient = __uuidof(IAudioClient);
 const IID IID_IAudioCaptureClient = __uuidof(IAudioCaptureClient);
 
-void TestWaveAudio2(std::function<void(uint8_t*, size_t)> callback) {
+void TestWaveAudio2(std::function<void(const uint8_t*, size_t)> callback) {
 	HRESULT hr;
 	REFERENCE_TIME reqDuration = REFTIMES_PER_SEC;
 	REFERENCE_TIME actualDuration;

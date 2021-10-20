@@ -95,6 +95,7 @@ ProjIncludes = {
 	"dependencies/bento/include",
 	"dependencies/ffmpeg/include",
 	"dependencies/jack/include",
+	"dependencies/fdk-aac/include",
 }
 
 -- These are all the default dependencies that require linking
@@ -120,6 +121,7 @@ Dependencies = {
 	"dependencies/ffmpeg/lib/avfilter.lib",
 	"dependencies/ffmpeg/lib/avformat.lib",
 	"dependencies/ffmpeg/lib/avutil.lib",
+	"dependencies/ffmpeg/lib/postproc.lib",
 	"dependencies/ffmpeg/lib/swresample.lib",
 	"dependencies/ffmpeg/lib/swscale.lib",
 	"dependencies/jack/lib/libjack64.lib",
@@ -135,6 +137,7 @@ DependenciesDebug = {
 	"dependencies/fmod/lib/fmodstudioL_vc.lib",
 	"dependencies/fmod/lib/fmodL_vc.lib",
 	"dependencies/bento/lib/Bento4D.lib",
+	"dependencies/fdk-aac/lib/fdk-aacd.lib",
 }
 
 DependenciesRelease = {
@@ -147,6 +150,7 @@ DependenciesRelease = {
 	"dependencies/fmod/lib/fmodstudio_vc.lib",
 	"dependencies/fmod/lib/fmod_vc.lib",
 	"dependencies/bento/lib/Bento4.lib",
+	"dependencies/fdk-aac/lib/fdk-aac.lib",
 }
 
 -- These are what we are linking to (mostly other projects)
@@ -257,6 +261,12 @@ end
 if not os.isdir(path.join(rootDir, "shared_assets", "dll")) then
 	os.mkdir(path.join(rootDir, "shared_assets", "dll"))
 end
+if not os.isdir(path.join(rootDir, "shared_assets", "dll", "debug")) then
+	os.mkdir(path.join(rootDir, "shared_assets", "dll", "debug"))
+end
+if not os.isdir(path.join(rootDir, "shared_assets", "dll", "release")) then
+	os.mkdir(path.join(rootDir, "shared_assets", "dll", "release"))
+end
 if not os.isdir(path.join(rootDir, "shared_assets", "res")) then
 	os.mkdir(path.join(rootDir, "shared_assets", "res"))
 end
@@ -354,18 +364,6 @@ function AddProjects(groupName, folders)
 			-- Gets the location of the project's source code
 			local srcdir = path.join(relpath, "src")
 
-			-- These are the commands that get executed after build, but before debugging
-			postbuildcommands {
-				-- This step copies over anything in the dll folder to the output directory
-		  		"(xcopy /Q /E /Y /I /C \"%{wks.location}shared_assets\\dll\" \"%{absdir}\")",
-		  		"(xcopy /Q /E /Y /I /C \"%{wks.location}dependencies\\dll\" \"%{absdir}\")",
-		  		-- This step ensures that the project has a resource directory
-		  		"(IF NOT EXIST \"%{resdir}\" mkdir \"%{resdir}\")",
-		  		"(xcopy /Q /E /Y /I /C \"%{wks.location}shared_assets\\res\" \"%{absdir}\")",
-		  		-- This step copies all the resources to the output directory
-		  		"(xcopy /Q /E /Y /I /C \"%{resdir}\" \"%{absdir}\")"
-			} 
-
 			-- Our source files are everything in the src folder
 			files {
 				"%{prj.location}\\src\\**.h",
@@ -405,6 +403,18 @@ function AddProjects(groupName, folders)
 				symbols "on"
 
 				links(ProjLinksDebug)
+				
+				-- These are the commands that get executed after build, but before debugging
+				postbuildcommands {
+					-- This step copies over anything in the dll folder to the output directory
+					"(xcopy /Q /E /Y /I /C \"%{wks.location}shared_assets\\dll\\debug\" \"%{absdir}\")",
+					"(xcopy /Q /E /Y /I /C \"%{wks.location}dependencies\\dll\" \"%{absdir}\")",
+					-- This step ensures that the project has a resource directory
+					"(IF NOT EXIST \"%{resdir}\" mkdir \"%{resdir}\")",
+					"(xcopy /Q /E /Y /I /C \"%{wks.location}shared_assets\\res\" \"%{absdir}\")",
+					-- This step copies all the resources to the output directory
+					"(xcopy /Q /E /Y /I /C \"%{resdir}\" \"%{absdir}\")"
+				} 
 
 			-- Filters for release configuration
 			filter "configurations:Release"
@@ -412,6 +422,18 @@ function AddProjects(groupName, folders)
 				optimize "on"
 
 				links(ProjLinksRelease)
+				
+				-- These are the commands that get executed after build, but before debugging
+				postbuildcommands {
+					-- This step copies over anything in the dll folder to the output directory
+					"(xcopy /Q /E /Y /I /C \"%{wks.location}shared_assets\\dll\\release\" \"%{absdir}\")",
+					"(xcopy /Q /E /Y /I /C \"%{wks.location}dependencies\\dll\" \"%{absdir}\")",
+					-- This step ensures that the project has a resource directory
+					"(IF NOT EXIST \"%{resdir}\" mkdir \"%{resdir}\")",
+					"(xcopy /Q /E /Y /I /C \"%{wks.location}shared_assets\\res\" \"%{absdir}\")",
+					-- This step copies all the resources to the output directory
+					"(xcopy /Q /E /Y /I /C \"%{resdir}\" \"%{absdir}\")"
+				} 
 	end
 
 end
