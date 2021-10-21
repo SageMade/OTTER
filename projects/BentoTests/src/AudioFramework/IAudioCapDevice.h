@@ -1,8 +1,29 @@
 #pragma once
 #include <string>
 #include <functional>
-#include "AudioInStreamConfig.h"
+#include <AudioFramework/SampleFormat.h>
 
+/// <summary>
+/// Basic configuration data for an audio capture stream
+/// </summary>
+struct AudioInStreamConfig {
+	/// <summary>
+	/// The number of channels the stream is outputting
+	/// </summary>
+	uint8_t      NumChannels;
+	/// <summary>
+	/// The stream's output format
+	/// </summary>
+	SampleFormat Format;
+	/// <summary>
+	/// The stream's sampling rate (samples per second)
+	/// </summary>
+	uint32_t     SampleRate;
+};
+
+/// <summary>
+/// Interface for an audio capture stream (ex a WMF port or Jack Audio stream)
+/// </summary>
 class IAudioCapDevice {
 public:
 	typedef std::function<void(const uint8_t**, size_t)> DataCallback;
@@ -45,5 +66,4 @@ protected:
 
 	std::string         _humanReadableName;
 	AudioInStreamConfig _config;
-	DataCallback        _callback;
 };

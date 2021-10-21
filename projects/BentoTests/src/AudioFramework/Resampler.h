@@ -1,8 +1,9 @@
 #pragma once
-#include <AudioFramework/AudioInStreamConfig.h>
+#include <AudioFramework/SampleFormat.h>
+#include <AudioFramework/IAudioCapDevice.h>
 
 struct SwrContext;
-class AudioEncoder;
+class IAudioEncoder;
 
 class Resampler {
 public:
@@ -51,7 +52,7 @@ public:
 	/// Note that this will detach all output buffers that have been assigned!
 	/// </summary>
 	/// <param name="encoder">The encoder to match the output stream to</param>
-	void MatchDestEncoding(const AudioEncoder* encoder);
+	void MatchDestEncoding(const IAudioEncoder* encoder);
 
 	/// <summary>
 	/// Overrides the input configuration for this resampler.
@@ -73,6 +74,7 @@ public:
 
 	void EncodeFrame(uint32_t sampleCount = 0);
 
+	void SetOutputFrameSampleCount(uint32_t sampleCount);
 protected:
 	StreamConfig _inConfig;
 	StreamConfig _outConfig;

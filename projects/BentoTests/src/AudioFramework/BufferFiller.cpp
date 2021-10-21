@@ -11,7 +11,7 @@ BufferFiller::BufferFiller(uint8_t** dataStores, uint32_t numBuffers, size_t siz
 	}
 }
 
-BufferFiller::BufferFiller(size_t size, uint32_t count)
+BufferFiller::BufferFiller(uint32_t count, size_t size)
 	: buffers(nullptr), bufferSize(size), bufferOffset(0), ownsBuffer(true), bufferCount(count) {
 	buffers = new uint8_t*[bufferSize];
 	for (int ix = 0; ix < bufferCount; ix++) {
@@ -30,6 +30,10 @@ BufferFiller::~BufferFiller() {
 }
 
 void BufferFiller::FeedData(const uint8_t** data, size_t length, std::function<void(uint8_t**, size_t)> onFullCallback) {
+	if (length == 0) {
+		onFullCallback(buffers, bufferSize - bufferOffset);
+	}
+
 	// We use remaining and an offset so we don't have to spend the time going back and forth
 	size_t remaining = length;
 	size_t offset = 0;
@@ -78,4 +82,5 @@ void BufferFiller::Flush() {
 	for (int ix = 0; ix < bufferCount; ix++) {
 		memset(buffers[ix] + bufferOffset, 0, bufferSize - bufferOffset);
 	}
+	bufferOffset = 0;
 }

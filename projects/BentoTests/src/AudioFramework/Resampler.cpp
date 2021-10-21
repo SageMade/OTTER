@@ -7,8 +7,8 @@ extern "C" {
 	#include <libavutil/log.h>
 	#include <libavutil/error.h>
 	#include <libavutil/channel_layout.h>
-#include "AudioEncoder.h"
 }
+#include <AudioFramework/AudioEncoders/IAudioEncoder.h>
 
 Resampler::Resampler() :
 	_ffmegResample(nullptr),
@@ -32,6 +32,13 @@ Resampler::~Resampler() {
 		swr_free(&_ffmegResample);
 	}
 }
+
+
+void Resampler::SetOutputFrameSampleCount(uint32_t sampleCount) {
+	LOG_ASSERT(_ffmegResample == nullptr, "This resampler has already been initialized! Check your logic!");
+	_outConfig.FrameSampleCount = sampleCount;
+}
+
 
 void Resampler::SetOutputChannelPtr(uint8_t channel, uint8_t* backingField) {
 	LOG_ASSERT(channel >= 0 && channel < _outConfig.NumChannels && channel < 8, "Channel outside the range for this resampler!");
@@ -57,13 +64,13 @@ void Resampler::MatchSourceEncoding(const AudioInStreamConfig& inputStream)
 	memset(&_inConfig.ChannelBuffs, 0, sizeof(void*) * 8);
 }
 
-void Resampler::MatchDestEncoding(const AudioEncoder* encoder)
+void Resampler::MatchDestEncoding(const IAudioEncoder* encoder)
 {
 	LOG_ASSERT(_ffmegResample == nullptr, "This resampler has already been initialized! Check your logic!");
-	_outConfig.Format = encoder->GetActualSampleFormat();
+	_outConfig.Format = encoder->GetInputFormat();
 	_outConfig.SampleRate = encoder->GetSampleRate();
 	_outConfig.NumChannels = encoder->GetNumChannels();
-	_outConfig.FrameSampleCount = encoder->FrameSampleCount();
+	_outConfig.FrameSampleCount = encoder->GetSamplesPerInputFrame();
 	memset(&_outConfig.ChannelBuffs, 0, sizeof(void*) * 8);
 }
 
@@ -88,11 +95,11 @@ void Resampler::Init()
 	_ffmegResample = swr_alloc();
 	av_opt_set_int(_ffmegResample, "in_channel_layout", av_get_default_channel_layout(_inConfig.NumChannels), 0);
 	av_opt_set_int(_ffmegResample, "in_sample_rate", _inConfig.SampleRate, 0);
-	av_opt_set_sample_fmt(_ffmegResample, "in_sample_fmt", ToFfmpeg(_inConfig.Format), 0);
+	av_opt_set_sample_fmt(_ffmegResample, "in_sample_fmt", (AVSampleFormat)ToFfmpeg(_inConfig.Format), 0);
 
 	av_opt_set_int(_ffmegResample, "out_channel_layout", av_get_default_channel_layout(_outConfig.NumChannels), 0);
 	av_opt_set_int(_ffmegResample, "out_sample_rate", _outConfig.SampleRate, 0);
-	av_opt_set_sample_fmt(_ffmegResample, "out_sample_fmt", ToFfmpeg(_outConfig.Format), 0);
+	av_opt_set_sample_fmt(_ffmegResample, "out_sample_fmt", (AVSampleFormat)ToFfmpeg(_outConfig.Format), 0);
 	swr_init(_ffmegResample);
 }
 
@@ -105,4 +112,3 @@ void Resampler::EncodeFrame(uint32_t sampleCount) {
 	
 	int outSamples = swr_convert(_ffmegResample, (uint8_t**)_outConfig.ChannelBuffs, _outConfig.FrameSampleCount, (const uint8_t**)_inConfig.ChannelBuffs, sampleCount);
 }
-

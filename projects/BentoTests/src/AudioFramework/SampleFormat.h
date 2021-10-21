@@ -72,14 +72,14 @@ inline std::string GetSampleFormatName(SampleFormat format) {
 /// </summary>
 /// <param name="format">The format to convert</param>
 /// <returns>An AVSampleFormat that corresponds to the given format</returns>
-inline AVSampleFormat ToFfmpeg(SampleFormat format) {
+inline int ToFfmpeg(SampleFormat format) {
 	switch (format) {
-		case SampleFormat::Float: return AV_SAMPLE_FMT_FLT;
-		case SampleFormat::PlanarFloat: return AV_SAMPLE_FMT_FLTP;
-		case SampleFormat::PCM:   return AV_SAMPLE_FMT_S16;
+		case SampleFormat::Float: return 3; //AV_SAMPLE_FMT_FLT
+		case SampleFormat::PlanarFloat: return 8; // AV_SAMPLE_FMT_FLTP
+		case SampleFormat::PCM:   return 1; // AV_SAMPLE_FMT_S16
 		case SampleFormat::Unknown: 
 		default:
-			return AV_SAMPLE_FMT_NONE;
+			return -1; //AV_SAMPLE_FMT_NONE
 	}
 }
 
@@ -89,11 +89,11 @@ inline AVSampleFormat ToFfmpeg(SampleFormat format) {
 /// </summary>
 /// <param name="format">The format to convert</param>
 /// <returns>A SampleFormat that corresponds to the given format</returns>
-inline SampleFormat FromFfmpeg(AVSampleFormat format) {
+inline SampleFormat FromFfmpeg(int format) {
 	switch (format) {
-		case AV_SAMPLE_FMT_FLT: return SampleFormat::Float;
-		case AV_SAMPLE_FMT_FLTP: return SampleFormat::PlanarFloat;
-		case AV_SAMPLE_FMT_S16: return SampleFormat::PCM;
+		case 3: return SampleFormat::Float;
+		case 8: return SampleFormat::PlanarFloat;
+		case 1: return SampleFormat::PCM;
 		default: return SampleFormat::Unknown;
 	}
 }

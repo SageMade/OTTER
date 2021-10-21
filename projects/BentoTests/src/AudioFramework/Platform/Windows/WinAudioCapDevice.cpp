@@ -1,5 +1,6 @@
 #include <AudioFramework/Platform/Windows/WinAudioCapDevice.h>
 #include <Logging.h>
+#include <AudioFramework/SampleFormat.h>
 
 #include <locale>
 #include <codecvt>
@@ -43,6 +44,7 @@ _attributes(wmfDevice), _device(nullptr), _reader(nullptr), _mediaType(nullptr)
 {
 	IMFMediaType* audioFormat = nullptr;
 	WAVEFORMATEXTENSIBLE* waveFormatEX = nullptr; // The extended wave format for the recording device
+	// Extract wide name from Windows
 	LPWSTR name;
 	uint32_t size;
 	_attributes->GetAllocatedString(MF_DEVSOURCE_ATTRIBUTE_FRIENDLY_NAME, &name, &size);
@@ -63,6 +65,7 @@ _attributes(wmfDevice), _device(nullptr), _reader(nullptr), _mediaType(nullptr)
 	// Get the native media type of the stream
 	_reader->GetNativeMediaType(MF_SOURCE_READER_FIRST_AUDIO_STREAM, MF_SOURCE_READER_CURRENT_TYPE_INDEX, &audioFormat);
 
+	// Get the media representation so we can pull out it's configuration
 	void* rawRepresentation = nullptr;
 	audioFormat->GetRepresentation(AM_MEDIA_TYPE_REPRESENTATION, &rawRepresentation);
 	AM_MEDIA_TYPE* format = reinterpret_cast<AM_MEDIA_TYPE*>(rawRepresentation);
@@ -108,12 +111,14 @@ void WinAudioCapDevice::Init(const AudioInStreamConfig* targetConfig) {
 		}
 	}
 
+	// Create a media type for the device, pass it the configuration parameters
 	MFCreateMediaType(&_mediaType);
 	_mediaType->SetGUID(MF_MT_MAJOR_TYPE, MFMediaType_Audio);
 	_mediaType->SetGUID(MF_MT_SUBTYPE, ToMfFormat(_config.Format));
 	_mediaType->SetUINT32(MF_MT_AUDIO_NUM_CHANNELS, _config.NumChannels);
 	_mediaType->SetUINT32(MF_MT_AUDIO_SAMPLES_PER_SECOND, _config.SampleRate);
 
+	// Tell the audio reader to use that media type
 	_reader->SetCurrentMediaType(0, nullptr, _mediaType);
 }
 

@@ -19,14 +19,20 @@ WinAudioCapDeviceEnumerator::WinAudioCapDeviceEnumerator() : IAudioCapDeviceEnum
 	UINT numDevs = 0;
 	MFEnumDeviceSources(attributes, &devices, &numDevs);
 
-	_numDevices = numDevs;
-	_devices = reinterpret_cast<IAudioCapDevice**>(malloc(sizeof(IAudioCapDevice*) * numDevs));
+	// Free the attributes now that we're done with them
+	attributes->Release();
 
+	// Allocate an array to store the device list
+	_numDevices = numDevs;
+	_devices = new IAudioCapDevice*[numDevs];
+
+	// Create a new device for each IMFAttribute configuration
 	for (int ix = 0; ix < numDevs; ix++) {
 		WinAudioCapDevice* device = new WinAudioCapDevice(devices[ix]);
 		_devices[ix] = device;
 	}
 
+	// Store the IMF devices array for later cleanup
 	_imfDevices = devices;
 }
 
@@ -35,5 +41,5 @@ WinAudioCapDeviceEnumerator::~WinAudioCapDeviceEnumerator() {
 	for (int ix = 0; ix < _numDevices; ix++) {
 		delete _devices[ix];
 	}
-	free(_devices);	
+	delete[] _devices;
 }

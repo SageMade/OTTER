@@ -20,7 +20,7 @@ extern "C" {
 
 #include "CustomAtom.h"
 #include "ConsoleUtils.h"
-#include "BufferFiller.h"
+#include <AudioFramework/BufferFiller.h>
 #include <BinaryWriter.h>
 #include <BinaryFileWriter.h>
 #include <Windows/WaveIn.h>
@@ -28,10 +28,11 @@ extern "C" {
 #include <AudioFramework/Platform/Windows/WinAudioCapDeviceEnumerator.h>
 #include "AudioFramework/IAudioPlatform.h"
 #include "AudioFramework/Platform/Windows/WinAudioPlatform.h"
-#include "Logging.h"
 #include <conio.h>
+#include "Logging.h"
 #include "AudioFramework/Resampler.h"
-#include "AudioFramework/AudioEncoder.h"
+#include "AudioFramework/AudioEncoders/IAudioEncoder.h"
+#include "AudioFramework/AudioEncoders/AacEncoder.h"
 
 #define VALIDATE_ALLOC(param, message, returnCode) if (param == nullptr) { std::cout << message << std::endl; return returnCode; }
 #define VALIDATE_FFMPEG(ret, message, returnCode) if (ret < 0) { std::cout << message << std::endl; return returnCode; }
@@ -91,7 +92,7 @@ struct AdtsHeader {
 	AdtsHeader(){ 
 		Bytes[0] = 0b11111111;
 		Bytes[1] = 0b11110001;
-		Bytes[2] = 0b00010000;
+		Bytes[2] = 0b01010000;
 		Bytes[3] = 0b10000000;
 		Bytes[4] = 0b00000000;
 		Bytes[5] = 0b00011111;
@@ -140,6 +141,7 @@ void StoreSampleData(uint8_t* data, size_t len, AP4_SyntheticSampleTable* table,
 	if (writeHeader) {
 		// TODO: This can be cached
 		AdtsHeader header      = AdtsHeader();
+		header.SetAacProfile(AdtsHeader::AAC_LC);
 		header.SetSampleFreqIndex(sampling_frequency_index);
 		header.SetChannelConfig(numChannels);
 		header.SetFrameLength(len);
@@ -147,8 +149,14 @@ void StoreSampleData(uint8_t* data, size_t len, AP4_SyntheticSampleTable* table,
 		sample_data->Write(header.Bytes, 7);
 	}
 	memcpy(sample_data->UseData() + (writeHeader ? 7 : 0), data, len);
-	table->AddSample(*sample_data, 0, len + (writeHeader ? 7 : 0), numInputSamples, sample_description_index, 0, 0, true);
+	if (numInputSamples != 1024) {
+		LOG_INFO("Received partial packet: {} samples, {} bytes", numInputSamples, len);
+		table->AddSample(*sample_data, 0, len + (writeHeader ? 7 : 0), 1024, sample_description_index, total_duration, 0, false);
+	} else {
+		table->AddSample(*sample_data, 0, len + (writeHeader ? 7 : 0), numInputSamples, sample_description_index, total_duration, 0, false);
+	}
 	sample_data->Release();
+	total_duration += numInputSamples;
 }
 
 /// <summary>
@@ -215,9 +223,9 @@ static int encode(AVCodecContext* ctx, AVFrame* frame, AVPacket* packet, AP4_Syn
 /*----------------------------------------------------------------------
 |   MakeDsi (Taken from Bento4 samples)
 +---------------------------------------------------------------------*/
-static void MakeDsi(unsigned int sampling_frequency_index, unsigned int channel_configuration, unsigned char* dsi)
+static void MakeDsi(unsigned int sampling_frequency_index, unsigned int channel_configuration, AacMediaType mediaType, unsigned char* dsi)
 {
-	unsigned int object_type = AP4_MPEG4_AUDIO_OBJECT_TYPE_AAC_MAIN; // AAC LC by default
+	unsigned int object_type = (int)mediaType; // AAC LC by default
 	dsi[0] = (object_type << 3) | (sampling_frequency_index >> 1);
 	dsi[1] = ((sampling_frequency_index & 1) << 7) | (channel_configuration << 3);
 }
@@ -301,7 +309,7 @@ int RecordStream(const std::string& path) {
 		AP4_DataBuffer dsi;
 		unsigned char aac_dsi[2];
 		int sample_index = FindAdtsSampleIndex(ctx->sample_rate);
-		MakeDsi(sample_index, 1, aac_dsi);
+		MakeDsi(sample_index, 1, AacMediaType::LC, aac_dsi);
 		dsi.SetData(aac_dsi, 2);
 		AP4_MpegAudioSampleDescription* sample_description = new AP4_MpegAudioSampleDescription(
 			AP4_OTI_MPEG4_AUDIO,   // object type
@@ -336,7 +344,7 @@ int RecordStream(const std::string& path) {
 
 		// The packed buffer stores nSamples * sizeof(sample) * channels  bytes, stores all streams tightly packed
 		size_t fullPackedInputSize = frame->nb_samples * GetSampleFormatSize(inputConfig.Format) * inputConfig.NumChannels;
-		BufferFiller frameBuffer(fullPackedInputSize, 1);
+		BufferFiller frameBuffer(1, fullPackedInputSize);
 
 		//
 		uint8_t** outputBuffers = new uint8_t * [ctx->channels];
@@ -431,6 +439,8 @@ int RecordStream2(const std::string& bentoPath, const std::string& ffmpegPath = 
 	av_log_set_level(AV_LOG_VERBOSE);
 	avcodec_register_all();
 
+	uint8_t CHANNEL_COUNT = 2;
+
 	IAudioPlatform* audioPlatform = new WinAudioPlatform();
 	audioPlatform->Init();
 
@@ -447,6 +457,7 @@ int RecordStream2(const std::string& bentoPath, const std::string& ffmpegPath = 
 	AudioInStreamConfig config = selectedDevice->GetConfig();
 	// Force the stream into PCM format
 	config.Format = SampleFormat::PCM;
+	config.NumChannels = CHANNEL_COUNT;
 	
 	std::cout << "====== DEFAULT FORMAT ======" << std::endl;
 	std::cout << "Channels: " << (int)config.NumChannels << std::endl;
@@ -459,11 +470,15 @@ int RecordStream2(const std::string& bentoPath, const std::string& ffmpegPath = 
 
 	// Perform an initial poll to sync up the device
 	selectedDevice->PollDevice([](const uint8_t** dat, size_t len) { std::cout << "hi!" << len << std::endl; });
+	selectedDevice->PollDevice([](const uint8_t** dat, size_t len) { std::cout << "hi!" << len << std::endl; });
 
 	// Create the audio encoder
-	AudioEncoder* encoder = new AudioEncoder();
-	encoder->SetBitRate(128000);
-	encoder->SetEncodingFormat(EncodingFormat::AAC);
+	AacEncoder* encoder = new AacEncoder();
+	encoder->SetBitRate(1.5f * 44100u);
+	encoder->SetSampleRate(selectedDevice->GetConfig().SampleRate);
+	encoder->SetNumChannels(CHANNEL_COUNT);
+	encoder->SetAOT(AacMediaType::LC);
+	encoder->SetTransportType(AacTransportType::ADTS);
 	encoder->Init();
 
 	// Create a resampling context to convert PCM to a format the
@@ -471,13 +486,14 @@ int RecordStream2(const std::string& bentoPath, const std::string& ffmpegPath = 
 	// TODO: Only create resampler if input and output types do not match
 	Resampler* resampler = new Resampler();
 	resampler->MatchSourceEncoding(selectedDevice->GetConfig());
-	resampler->SetInputFrameSampleCount(encoder->FrameSampleCount());
+	resampler->SetInputFrameSampleCount(encoder->GetInputSampleCapacity());
 	resampler->MatchDestEncoding(encoder);
 	resampler->Init();
 
 	AP4_Result result;
 	AP4_ByteStream* output = NULL;
 	result = AP4_FileByteStream::Create(bentoPath.c_str(), AP4_FileByteStream::STREAM_MODE_WRITE, output);
+	LOG_ASSERT(output != nullptr, "Failed to open the output stream! Make sure the file is not in use");
 
 	// create a sample table
 	AP4_SyntheticSampleTable* sample_table = new AP4_SyntheticSampleTable();
@@ -485,12 +501,13 @@ int RecordStream2(const std::string& bentoPath, const std::string& ffmpegPath = 
 	AP4_DataBuffer dsi;
 	unsigned char aac_dsi[2];
 	int sample_index = FindAdtsSampleIndex(encoder->GetSampleRate());
-	MakeDsi(sample_index, encoder->GetNumChannels(), aac_dsi);
+	MakeDsi(sample_index, encoder->GetNumChannels(), encoder->GetAOT(), aac_dsi);
 	dsi.SetData(aac_dsi, 2);
+	uint32_t sampleSizeBits = GetSampleFormatSize(encoder->GetInputFormat()) * 8;
 	AP4_MpegAudioSampleDescription* sample_description = new AP4_MpegAudioSampleDescription(
 		AP4_OTI_MPEG4_AUDIO,   // object type
 		encoder->GetSampleRate(),
-		GetSampleFormatSize(encoder->GetActualSampleFormat()) * 8, //ctx->bits_per_coded_sample, // sample size
+		sampleSizeBits, //ctx->bits_per_coded_sample, // sample size
 		encoder->GetNumChannels(),
 		&dsi,          // decoder info
 		6144,          // buffer size
@@ -502,16 +519,16 @@ int RecordStream2(const std::string& bentoPath, const std::string& ffmpegPath = 
 
 
 	// Attach the encoder inputs as the outputs of the resampler
-	int numOutBuffers = av_sample_fmt_is_planar(ToFfmpeg(encoder->GetActualSampleFormat())) ? encoder->GetNumChannels() : 1;
+	int numOutBuffers = av_sample_fmt_is_planar((AVSampleFormat)ToFfmpeg(encoder->GetInputFormat())) ? encoder->GetNumChannels() : 1;
 	for(int ix = 0; ix < numOutBuffers; ix++) {
-		resampler->SetOutputChannelPtr(ix, encoder->GetInputBufferPtr(ix));
+		resampler->SetOutputChannelPtr(ix, encoder->GetInputBuffer(ix));
 	}
 
 	// We need to create temp buffers to fill encoder frames
 	// Calculate how many buffers we need, their size, then allocate them
-	int numInBuffers = av_sample_fmt_is_planar(ToFfmpeg(resampler->GetInputConfig().Format)) ? resampler->GetInputConfig().NumChannels : 1 ;
-	size_t frameByteSize = encoder->CalcFrameBufferSize(resampler->GetInputConfig().Format);
-	BufferFiller* bufferFiller = new BufferFiller(frameByteSize, numInBuffers);
+	int numInBuffers = av_sample_fmt_is_planar((AVSampleFormat)ToFfmpeg(resampler->GetInputConfig().Format)) ? resampler->GetInputConfig().NumChannels : 1 ;
+	size_t frameByteSize = GetSampleFormatSize(resampler->GetInputConfig().Format) * encoder->GetSamplesPerInputFrame();
+	BufferFiller* bufferFiller = new BufferFiller(numInBuffers, frameByteSize);
 	// Attach the buffers from buffer filler to the inputs of the resampler
 	for (int ix = 0; ix < numInBuffers; ix++) {
 		resampler->SetInputChannelPtr(ix, bufferFiller->DataBuffers()[ix]);
@@ -519,20 +536,19 @@ int RecordStream2(const std::string& bentoPath, const std::string& ffmpegPath = 
 
 	// Function to handle when data has been encoded by the encoder
 	std::function<void(EncoderResult*)> encodedCallback = [&](EncoderResult* output) {
-		StoreSampleData(output->Data, output->DataSize, sample_table, output->Duration, sample_description_index, encoder->GetNumChannels());
-		total_duration += output->Duration;
+		StoreSampleData(output->Data, output->DataSize, sample_table, output->Duration, sample_description_index, encoder->GetNumChannels(), false);
 	};
 
-	// Function to handle when a complete frame is ready for encoding
-	std::function<void(uint8_t**, size_t)> flushBufferCallback = [&](uint8_t** data, size_t len){
-		resampler->EncodeFrame();
-		encoder->EncodeFrame(encodedCallback);
-	};
+	// Bind the data frame callb
+	encoder->SetDataCallback(encodedCallback);
+
+	uint32_t estimatedDuration = 0;
 
 	// Main encoding loop
 	while (true) {
 		selectedDevice->PollDevice([&](const uint8_t** dat, size_t len) {
-			bufferFiller->FeedData(dat, len, flushBufferCallback);
+			estimatedDuration += len / sizeof(uint16_t) / selectedDevice->GetConfig().NumChannels;
+			encoder->EncodeFrame(dat, len);
 		});
 
 		if (kbhit()) {
@@ -540,24 +556,14 @@ int RecordStream2(const std::string& bentoPath, const std::string& ffmpegPath = 
 		}
 	}
 
-	// Flush any data left in the buffer
-	if (bufferFiller->HasData()) {
-		bufferFiller->Flush();
-		// Zero out frames 
-		for (int ix = 0; ix < numOutBuffers; ix++) {
-			memset(encoder->GetInputBufferPtr(ix), 0, encoder->GetFrameBufferSize());
-		}
-		flushBufferCallback(bufferFiller->DataBuffers(), bufferFiller->Size());
-	}
-	// Flush the encoder
-	encoder->Flush(encodedCallback);
+	encoder->Flush();
 
 
 	// create a movie
 	AP4_Movie* movie = new AP4_Movie();
 
 	// create an audio track
-	AP4_Track* track = new AP4_Track(AP4_Track::TYPE_AUDIO,
+ 	AP4_Track* track = new AP4_Track(AP4_Track::TYPE_AUDIO,
 									 sample_table,
 									 0,     // track id
 									 encoder->GetSampleRate(),  // movie time scale
@@ -566,6 +572,14 @@ int RecordStream2(const std::string& bentoPath, const std::string& ffmpegPath = 
 									 total_duration,    // media duration
 									 "eng", // language
 									 0, 0); // width, height
+
+
+	double durationEst = (double)estimatedDuration / selectedDevice->GetConfig().SampleRate;
+	LOG_INFO("Estimated duration: {}", durationEst);
+
+	// May as well get the duration in secs
+	double durationS = (double)total_duration / encoder->GetSampleRate();
+	LOG_INFO("Actual duration: {}", durationS);
 
 	// add the track to the movie
 	movie->AddTrack(track);
