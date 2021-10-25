@@ -1,7 +1,7 @@
 #pragma once
 #include <EnumToString.h>
-#include <bullet/btBulletCollisionCommon.h>
-#include <bullet/btBulletDynamicsCommon.h>
+#include <btBulletCollisionCommon.h>
+#include <btBulletDynamicsCommon.h>
 
 #include "Gameplay/Components/IComponent.h"
 #include "Gameplay/Physics/Collider.h"
@@ -12,7 +12,8 @@ ENUM(RigidBodyType, int,
     Static    = 1,
 	// Objects that are driven by physics
 	Dynamic   = 2,
-	// Objects that are driven by some control method
+	// Objects that are driven by some control method, ex: doors, moving
+	// platforms, etc...
 	// kinematic objects will not collide with static or other
 	// kinematic objects
 	Kinematic = 3,
@@ -25,7 +26,7 @@ class RigidBody : public IComponent {
 public:
 	typedef std::shared_ptr<RigidBody> Sptr;
 
-	RigidBody(RigidBodyType type = RigidBodyType::Dynamic);
+	RigidBody(RigidBodyType type = RigidBodyType::Static);
 	virtual ~RigidBody();
 
 	/// <summary>
@@ -151,6 +152,16 @@ public:
 	/// </summary>
 	/// <param name="worldTorque">The torque, in radians per second and world space</param>
 	void ApplyTorqueImpulse(const glm::vec3& worldTorque);
+
+	/// <summary>
+	/// Sets the type of rigid body (static, dynamic, kinematic)
+	/// </summary>
+	/// <param name="type">The new type for the body</param>
+	void SetType(RigidBodyType type);
+	/// <summary>
+	/// Returns this RigidBody's type (static, dynamic, kinematic)
+	/// </summary>
+	RigidBodyType GetType() const;
 
 	/// <summary>
 	/// Invoked for each RigidBody before the physics world is stepped forward a frame,

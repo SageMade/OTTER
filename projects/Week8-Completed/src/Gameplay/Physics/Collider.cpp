@@ -13,6 +13,7 @@
 #include "Gameplay/Physics/Colliders/CapsuleCollider.h"
 #include "Gameplay/Physics/Colliders/ConeCollider.h"
 #include "Gameplay/Physics/Colliders/CylinderCollider.h"
+#include "Gameplay/Physics/Colliders/ConvexMeshCollider.h"
 
 const char* ColliderTypeComboNames = "Plane\0Box\0Sphere\0Capsule\0Cone\0Cylinder\0Convex Mesh\0Concave Mesh\0Terrain\0";
 
@@ -86,9 +87,9 @@ ICollider::Sptr ICollider::Create(ColliderType type) {
 		case ColliderType::Capsule:     return CapsuleCollider::Create();
 		case ColliderType::Cone:        return ConeCollider::Create();
 		case ColliderType::Cylinder:    return CylinderCollider::Create();
-		case ColliderType::ConcaveMesh: return nullptr;
-		case ColliderType::ConvexMesh:  return nullptr;
-		case ColliderType::Terrain:     return nullptr;
+		case ColliderType::ConvexMesh:  return ConvexMeshCollider::Create();
+		case ColliderType::ConcaveMesh: throw std::runtime_error("Collider type not supported!"); return nullptr;
+		case ColliderType::Terrain:     throw std::runtime_error("Collider type not supported!"); return nullptr;
 		case ColliderType::Unknown:
 		default:
 			return nullptr;

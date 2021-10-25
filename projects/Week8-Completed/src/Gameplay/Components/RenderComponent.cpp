@@ -22,6 +22,10 @@ RenderComponent::RenderComponent() :
 	_meshBuilderParams(std::vector<MeshBuilderParam>())
 { }
 
+const MeshResource::Sptr& RenderComponent::GetMeshResource() const {
+	return _mesh;
+}
+
 const VertexArrayObject::Sptr& RenderComponent::GetMesh() const {
 	return _mesh->Mesh;
 }
@@ -55,5 +59,9 @@ RenderComponent::Sptr RenderComponent::FromJson(const nlohmann::json& data) {
 }
 
 void RenderComponent::RenderImGui(GameObject* context) {
-	// TODO
+	ImGui::Text("Indexed:   %s", _mesh->Mesh != nullptr ? (_mesh->Mesh->GetIndexBuffer() != nullptr ? "true" : "false") : "N/A");
+	ImGui::Text("Triangles: %d", _mesh->Mesh != nullptr ? (_mesh->Mesh->GetElementCount() / 3) : 0);
+	ImGui::Text("Source:    %s", _mesh->Filename.empty() ? "Generated" : _mesh->Filename.c_str());
+	ImGui::Separator();
+	ImGui::Text("Material:  %s", _material != nullptr ? _material->Name.c_str() : "NULL");
 }

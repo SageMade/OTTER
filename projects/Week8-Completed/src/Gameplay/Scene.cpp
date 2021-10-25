@@ -1,5 +1,7 @@
 #include "Scene.h"
 
+#include <GLFW/glfw3.h>
+
 #include "Utils/FileHelpers.h"
 #include "Utils/GlmBulletConversions.h"
 
@@ -8,8 +10,10 @@
 Scene::Scene() :
 	Objects(std::vector<GameObject::Sptr>()),
 	Lights(std::vector<Light>()),
+	IsPlaying(false),
 	Camera(nullptr),
 	BaseShader(nullptr),
+	_filePath(""),
 	_lightingUbo(nullptr),
 	_ambientLight(glm::vec3(0.1f)),
 	_gravity(glm::vec3(0.0f, 0.0f, -9.81f))
@@ -61,46 +65,72 @@ const glm::vec3& Scene::GetAmbientLight() const {
 }
 
 void Scene::Awake() {
+	// Not a huge fan of this, but we need to get window size to notify our camera
+	// of the current screen size
+	int width, height;
+	glfwGetWindowSize(Window, &width, &height);
+	Camera->ResizeWindow(width, height);
+
+	// Call awake on all gameobjects
 	for (auto& obj : Objects) {
 		obj->Awake();
 	}
+	// Set up our lighting 
 	SetupShaderAndLights();
 }
 
 void Scene::DoPhysics(float dt) {
-	for (auto& rb : _rigidBodies) {
-		rb->PhysicsPreStep(dt);
+	if (IsPlaying) {
+		for (auto& rb : _rigidBodies) {
+			rb->PhysicsPreStep(dt);
+		}
+
+		_physicsWorld->stepSimulation(dt, 10);
+
+		for (auto& rb : _rigidBodies) {
+			rb->PhysicsPostStep(dt);
+		}
 	}
+}
 
-	_physicsWorld->stepSimulation(dt, 10);
-
-	for (auto& rb : _rigidBodies) {
-		rb->PhysicsPostStep(dt);
+void Scene::Update(float dt) {
+	if (IsPlaying) {
+		for (auto& obj : Objects) {
+			obj->Update(dt);
+		}
 	}
 }
 
 void Scene::SetShaderLight(int index, bool update /*= true*/) {
+
+	// Make sure that the index is within range
 	if (index >= 0 && index < Lights.size() && index < MAX_LIGHTS) {
+		// Get a reference to the light UBO data so we can update it
+		LightingUboStruct& data = _lightingUbo->GetData();
 		Light& light = Lights[index];
 
-		auto& data = _lightingUbo->GetData();
+		// Copy to the ubo data
 		data.Lights[index].Position = light.Position;
 		data.Lights[index].Color = light.Color;
 		data.Lights[index].Attenuation = 1.0f / (1.0f + light.Range);
 
+		// If requested, send the new data to the UBO
 		if (update)	_lightingUbo->Update();
 	}
 }
 
-void Scene::SetupShaderAndLights()
-{
-	auto& data = _lightingUbo->GetData();
+void Scene::SetupShaderAndLights() {
+	// Get a reference to the light UBO data so we can update it
+	LightingUboStruct& data = _lightingUbo->GetData();
+	// Send in how many active lights we have and the global lighting settings
 	data.AmbientCol = glm::vec3(0.1f);
 	data.NumLights = Lights.size();
 
+	// Iterate over all lights that are enabled and configure them
 	for (int ix = 0; ix < Lights.size() && ix < MAX_LIGHTS; ix++) {
 		SetShaderLight(ix, false);
 	}
+	// Send updated data to OpenGL
 	_lightingUbo->Update();
 }
 
@@ -123,7 +153,7 @@ Scene::Sptr Scene::FromJson(const nlohmann::json& data)
 	result->Camera = Camera::Create();
 	result->Camera->SetPosition(ParseJsonVec3(data["camera"]["position"]));
 	result->Camera->SetForward(ParseJsonVec3(data["camera"]["normal"]));
-
+	
 	return result;
 }
 
@@ -158,8 +188,8 @@ nlohmann::json Scene::ToJson() const
 	return blob;
 }
 
-void Scene::Save(const std::string& path)
-{
+void Scene::Save(const std::string& path) {
+	_filePath = path;
 	// Save data to file
 	FileHelpers::WriteContentsToFile(path, ToJson().dump(1, '\t'));
 	LOG_INFO("Saved scene to \"{}\"", path);
@@ -170,7 +200,9 @@ Scene::Sptr Scene::Load(const std::string& path)
 	LOG_INFO("Loading scene from \"{}\"", path);
 	std::string content = FileHelpers::ReadFile(path);
 	nlohmann::json blob = nlohmann::json::parse(content);
-	return FromJson(blob);
+	Scene::Sptr result = FromJson(blob);
+	result->_filePath = path;
+	return result;
 }
 
 int Scene::NumObjects() const {

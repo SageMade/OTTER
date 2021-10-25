@@ -1,6 +1,6 @@
 #pragma once
 #include <GLM/glm.hpp>
-#include <bullet/btBulletCollisionCommon.h>
+#include <btBulletCollisionCommon.h>
 
 inline glm::vec3& ToGlm(btVector3& value) { return *reinterpret_cast<glm::vec3*>(&value); }
 inline const glm::vec3& ToGlm(const btVector3& value) { return *reinterpret_cast<const glm::vec3*>(&value); }

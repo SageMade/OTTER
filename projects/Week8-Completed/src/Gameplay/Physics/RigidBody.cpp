@@ -24,6 +24,10 @@ RigidBody::RigidBody(RigidBodyType type) :
 	_body(nullptr),
 	_shape(nullptr),
 	_motionState(nullptr),
+	_linearDamping(0.0f),
+	_angularDamping(0.005f),
+	_collisionGroup(0x01),
+	_collisionMask(0xFFFFFFFF),
 	_inertia(btVector3())
 { }
 
@@ -99,6 +103,9 @@ int RigidBody::GetCollisionMask() const {
 }
 
 ICollider::Sptr RigidBody::AddCollider(const ICollider::Sptr& collider) {
+	if (_body != nullptr) {
+		collider->Awake(_context);
+	}
 	_colliders.push_back(collider);
 	_isShapeDirty = true;
 	return collider;
@@ -137,6 +144,33 @@ void RigidBody::ApplyTorque(const glm::vec3& worldTorque) {
 
 void RigidBody::ApplyTorqueImpulse(const glm::vec3& worldTorque) {
 	_body->applyTorqueImpulse(ToBt(worldTorque));
+}
+
+void RigidBody::SetType(RigidBodyType type) {
+	_type = type;
+	if (_body != nullptr) {
+		// Remove any static or kinematic flags for the object
+		int flags = _body->getCollisionFlags() & ~btCollisionObject::CF_STATIC_OBJECT;
+		flags = _body->getCollisionFlags() & ~btCollisionObject::CF_KINEMATIC_OBJECT;
+
+		// Set appropriate flags
+		if (_type == RigidBodyType::Kinematic) {
+			_body->setCollisionFlags(flags | btCollisionObject::CF_KINEMATIC_OBJECT);
+		}
+		// If the object is static, disable it's gravity and notify bullet
+		else if (_type == RigidBodyType::Static) {
+			_body->setCollisionFlags(flags | btCollisionObject::CF_KINEMATIC_OBJECT);
+			_body->setGravity(btVector3(0.0f, 0.0f, 0.0f));
+		} else {
+			// If dynamic, we need to restore gravity from the scene
+			_body->setCollisionFlags(flags);
+			_body->setGravity(_scene->_physicsWorld->getGravity());
+		}
+	}
+}
+
+RigidBodyType RigidBody::GetType() const {
+	return _type;
 }
 
 void RigidBody::PhysicsPreStep(float dt) {
@@ -186,6 +220,12 @@ void RigidBody::Awake(GameObject* context) {
 	_context = context;
 	_scene = context->GetScene();
 	_prevScale = context->Scale;
+
+	// Awake all our colliders to let them do initialization
+	// that requires the gameobject
+	for (auto& collider : _colliders) {
+		collider->Awake(context);
+	}
 
 	// Create our compound shape and add all colliders
 	_shape = new btCompoundShape(true, _colliders.size());

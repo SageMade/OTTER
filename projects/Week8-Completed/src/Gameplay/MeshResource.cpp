@@ -1,22 +1,35 @@
 #include "MeshResource.h"
-#include "Utils/ObjLoader.h"
 #include <filesystem>
+
+#ifdef OPTIMIZED_OBJ_LOADER
+#include "Utils/OptimizedObjLoader.h" 
+#else
+#include "Utils/ObjLoader.h"
+#endif
 
 MeshResource::MeshResource() :
 	IResource(),
 	Filename(""),
 	MeshBuilderParams(std::vector<MeshBuilderParam>()),
-	Mesh(nullptr)
+	Mesh(nullptr),
+	BulletTriMesh(nullptr)
 { }
 
 MeshResource::MeshResource(const std::string& filename) :
 	IResource(),
 	Filename(filename),
 	MeshBuilderParams(std::vector<MeshBuilderParam>()),
-	Mesh(nullptr)
+	Mesh(nullptr),
+	BulletTriMesh(nullptr)  
 {
+	#ifdef OPTIMIZED_OBJ_LOADER
+	Mesh = OptimizedObjLoader::LoadFromFile(filename);
+	#else
 	Mesh = ObjLoader::LoadFromFile(filename);
+	#endif
 }
+
+MeshResource::~MeshResource() = default;
 
 nlohmann::json MeshResource::ToJson() const {
 	nlohmann::json result;
@@ -48,7 +61,12 @@ MeshResource::Sptr MeshResource::FromJson(const nlohmann::json& blob)
 	} else {
 		result->Filename = JsonGet<std::string>(blob, "filename", "null");
 		if (result->Filename != "null" && std::filesystem::exists(result->Filename)) {
+			#ifdef OPTIMIZED_OBJ_LOADER
+			result->Mesh = OptimizedObjLoader::LoadFromFile(result->Filename);
+			#else
 			result->Mesh = ObjLoader::LoadFromFile(result->Filename);
+			#endif
+			
 		}
 	}
 	return result;

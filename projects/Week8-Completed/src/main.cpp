@@ -56,6 +56,8 @@
 #include "Gameplay/Physics/Colliders/BoxCollider.h"
 #include "Gameplay/Physics/Colliders/PlaneCollider.h"
 #include "Gameplay/Physics/Colliders/SphereCollider.h"
+#include "Gameplay/Physics/Colliders/ConvexMeshCollider.h"
+#include "Utils/OptimizedObjLoader.h"
 
 //#define LOG_GL_NOTIFICATIONS
 
@@ -195,7 +197,38 @@ bool DrawLightImGui(const Scene::Sptr& scene, const char* title, int ix) {
 	return result;
 }
 
+#ifdef OPTIMIZED_OBJ_LOADER
+/// <summary>
+/// Draws the UI for our mesh conversion from OBJ to a binary format
+/// </summary>
+void DrawMeshConversionGui() {
+	// Buffers for input, static means they persist between calls
+	static char inPath[256];
+	static char outPath[256];
+	// The warning text
+	static std::string warnText = "No Warnings";
 
+	if (ImGui::CollapsingHeader("Mesh to Binary Conversion")) {
+		// Input and output paths
+		ImGui::InputText("In", inPath, 256);
+		ImGui::InputText("Out", outPath, 256);
+				
+		if (ImGui::Button("Convert to Binary")) {
+			// If the file exists, perform conversion and clear warnings
+			if (std::filesystem::exists(inPath)) {
+				OptimizedObjLoader::ConvertToBinary(inPath, outPath);
+				warnText = "No Warnings";
+			}
+			// File does not exist, show warning
+			else {
+				warnText = "The specified file does not exist!";
+			}
+		}
+		// Show the warning
+		ImGui::TextUnformatted(warnText.c_str());
+	}
+}
+#endif
 
 int main() {
 	Logger::Init(); // We'll borrow the logger from the toolkit, but we need to initialize it
@@ -250,7 +283,8 @@ int main() {
 			{ ShaderPartType::Fragment, "shaders/ubo_lights.glsl" }
 		}); 
 
-		MeshResource::Sptr monkeyMesh = ResourceManager::CreateAsset<MeshResource>("Monkey.obj");  
+		MeshResource::Sptr monkeyMesh = ResourceManager::CreateAsset<MeshResource>("Monkey.bobj");
+		MeshResource::Sptr testMesh   = ResourceManager::CreateAsset<MeshResource>("Bed_01.bobj");
 		Texture2D::Sptr    boxTexture = ResourceManager::CreateAsset<Texture2D>("textures/box-diffuse.png");
 		Texture2D::Sptr    monkeyTex  = ResourceManager::CreateAsset<Texture2D>("textures/monkey-uvMap.png");  
 		 
@@ -263,18 +297,18 @@ int main() {
 		// Create our materials
 		Material::Sptr boxMaterial = ResourceManager::CreateAsset<Material>();
 		{
-			Material::Sptr boxMat = boxMaterial;
-			boxMat->MatShader = scene->BaseShader;
-			boxMat->Texture = boxTexture;
-			boxMat->Shininess = 2.0f;
+			boxMaterial->Name = "Box";
+			boxMaterial->MatShader = scene->BaseShader;
+			boxMaterial->Texture = boxTexture;
+			boxMaterial->Shininess = 2.0f;
 		}	
 
 		Material::Sptr monkeyMaterial = ResourceManager::CreateAsset<Material>();
 		{
-			Material::Sptr monkeyMat = monkeyMaterial;
-			monkeyMat->MatShader = scene->BaseShader;
-			monkeyMat->Texture = monkeyTex;
-			monkeyMat->Shininess = 256.0f;
+			monkeyMaterial->Name = "Monkey";
+			monkeyMaterial->MatShader = scene->BaseShader;
+			monkeyMaterial->Texture = monkeyTex;
+			monkeyMaterial->Shininess = 256.0f;
 		}
 
 		// Create some lights for our scene
@@ -305,7 +339,7 @@ int main() {
 			renderer->SetMesh(meshRes);
 			renderer->SetMaterial(boxMaterial);
 
-			RigidBody::Sptr physics = plane->Add<RigidBody>(RigidBodyType::Static);
+			RigidBody::Sptr physics = plane->Add<RigidBody>(/*static by default*/);
 			physics->AddCollider(PlaneCollider::Create());
 		}
 
@@ -329,20 +363,22 @@ int main() {
 			renderer->SetMaterial(monkeyMaterial);
 
 			// Add a dynamic rigid body to this monkey
-			RigidBody::Sptr physics = monkey1->Add<RigidBody>();
-			physics->AddCollider(SphereCollider::Create(0.5f));
+			RigidBody::Sptr physics = monkey1->Add<RigidBody>(RigidBodyType::Dynamic);
+			physics->AddCollider(ConvexMeshCollider::Create());
 
 			// Add some behaviour that relies on the physics body
 			monkey1->Add<JumpBehaviour>();
 		}
 
-		GameObject::Sptr monkey2 = scene->CreateGameObject("Monkey 2");
+		GameObject::Sptr monkey2 = scene->CreateGameObject("Complex Object");
 		{
 			RenderComponent::Sptr renderer = monkey2->Add<RenderComponent>();
 			monkey2->Position = glm::vec3(-1.5f, 0.0f, 1.0f);
-			renderer->SetMesh(monkeyMesh);
-			renderer->SetMaterial(monkeyMaterial);
+			renderer->SetMesh(testMesh);
+			renderer->SetMaterial(boxMaterial);
+			monkey2->Rotation.x = 90.0f;
 			monkey2->Rotation.z = 180.0f;
+			monkey2->Scale = glm::vec3(0.01f);
 
 			RotatingBehaviour::Sptr behaviour = monkey2->Add<RotatingBehaviour>();
 			behaviour->RotationSpeed = glm::vec3(0.0f, 0.0f, -90.0f);
@@ -350,7 +386,6 @@ int main() {
 			// Kinematic rigid bodies are those controlled by some outside controller
 			// and ONLY collide with dynamic objects
 			RigidBody::Sptr physics = monkey2->Add<RigidBody>(RigidBodyType::Kinematic);
-			physics->AddCollider(SphereCollider::Create(0.5f));
 		}
 
 		// Save the asset manifest for all the resources we just loaded
@@ -375,6 +410,8 @@ int main() {
 	// Our high-precision timer
 	double lastFrame = glfwGetTime();
 
+	nlohmann::json editorSceneState;
+
 	///// Game loop /////
 	while (!glfwWindowShouldClose(window)) {
 		glfwPollEvents();
@@ -387,13 +424,37 @@ int main() {
 		// Showcasing how to use the imGui library!
 		bool isDebugWindowOpen = ImGui::Begin("Debugging");
 		if (isDebugWindowOpen) {
-			// Make a checkbox for the monkey rotation
-			ImGui::Checkbox("Rotating", &isRotating);
-			ImGui::DragFloat("Rotate speed", &rotateSpeed);
+			// Draws a button to control whether or not the game is currently playing
+			static char buttonLabel[64];
+			sprintf_s(buttonLabel, "%s###playmode", scene->IsPlaying ? "Exit Play Mode" : "Enter Play Mode");
+			if (ImGui::Button(buttonLabel)) {
+				// Save scene so it can be restored when exiting play mode
+				if (!scene->IsPlaying) {
+					editorSceneState = scene->ToJson();
+				}
+				// Toggle state
+				scene->IsPlaying = !scene->IsPlaying;
+
+				// If we've gone from playing to not playing, restore the state from before we started playing
+				if (!scene->IsPlaying) {
+					scene = Scene::FromJson(editorSceneState);
+					scene->Window = window;
+					scene->Awake();
+				}
+			}
+
+			// If we have the optimized mesh loader enabled, draw some UI for conversions
+			#ifdef OPTIMIZED_OBJ_LOADER
+			DrawMeshConversionGui();
+			#endif
 
 			// Make a new area for the scene saving/loading
 			ImGui::Separator();
 			if (DrawSaveLoadImGui(scene, scenePath)) {
+				// C++ strings keep internal lengths which can get annoying
+				// when we edit it's underlying datastore, so recalcualte size
+				scenePath.resize(strlen(scenePath.c_str()));
+
 				// We have loaded a new scene, call awake to set
 				// up all our components
 				scene->Window = window;
@@ -420,12 +481,17 @@ int main() {
 			for (int ix = 0; ix < scene->Lights.size(); ix++) {
 				char buff[256];
 				sprintf_s(buff, "Light %d##%d", ix, ix);
+				// DrawLightImGui will return true if the light was deleted
 				if (DrawLightImGui(scene, buff, ix)) {
+					// Remove light from scene, restore all lighting data
 					scene->Lights.erase(scene->Lights.begin() + ix);
 					scene->SetupShaderAndLights();
+					// Move back one element so we don't skip anything!
 					ix--;
 				}
 			}
+			// As long as we don't have max lights, draw a button
+			// to add another one
 			if (scene->Lights.size() < scene->MAX_LIGHTS) {
 				if (ImGui::Button("Add Light")) {
 					scene->Lights.push_back(Light());
@@ -437,9 +503,7 @@ int main() {
 		}
 
 		// Perform updates for all components
-		for (int ix = 0; ix < scene->NumObjects(); ix++) {
-			scene->GetObjectByIndex(ix)->Update(dt);
-		}
+		scene->Update(dt);
 
 		// Update our worlds physics!
 		scene->DoPhysics(dt);
@@ -448,6 +512,9 @@ int main() {
 		for (int ix = 0; ix < scene->NumObjects(); ix++) {
 			GameObject::Sptr& object = scene->GetObjectByIndex(ix);
 
+			// We now get renderable components from our gameobject, since that was moved
+			// to a component. A better solution would be to keep a list of RenderComponents*
+			// somewhere, where we could then sort based on material info
 			RenderComponent::Sptr renderable = object->Get<RenderComponent>();
 			if (renderable) {
 				// Update the object's transform for rendering

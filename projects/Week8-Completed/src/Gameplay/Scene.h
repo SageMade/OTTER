@@ -1,5 +1,5 @@
 #pragma once
-#include <bullet/btBulletDynamicsCommon.h>
+#include <btBulletDynamicsCommon.h>
 
 #include "Gameplay/Camera.h"
 #include "Gameplay/GameObject.h"
@@ -31,6 +31,9 @@ public:
 	Shader::Sptr               BaseShader; // Should think of more elegant ways of handling this
 
 	GLFWwindow*                Window; // another place that can use improvement
+
+	// Whether the application is in "play mode", lets us leverage editors!
+	bool                       IsPlaying;
 
 	Scene();
 	~Scene();
@@ -69,12 +72,33 @@ public:
 	const glm::vec3& GetAmbientLight() const;
 
 	/// <summary>
+	/// Gets the file path that this scene was saved to or loaded from
+	/// </summary>
+	const std::string& GetFilePath() const { return _filePath; }
+
+	/// <summary>
 	/// Calls awake on all objects in the scene,
 	/// call this after loading or creating a new scene
 	/// </summary>
 	void Awake();
 
+	/// <summary>
+	/// Performs physics updates for all physics bodies in this scene,
+	/// should be called after Update in the main loop
+	/// 
+	/// Only invokes events if IsPlaying is true
+	/// </summary>
+	/// <param name="dt">The time in seconds since the last frame</param>
 	void DoPhysics(float dt);
+
+	/// <summary>
+	/// Performs updates on all enabled components and gameobjects in the
+	/// scene
+	/// 
+	/// Only invokes events if IsPlaying is true
+	/// </summary>
+	/// <param name="dt">The time in seconds since the last frame</param>
+	void Update(float dt);
 
 	/// <summary>
 	/// Handles setting the shader uniforms for our light structure in our array of lights
@@ -128,6 +152,9 @@ protected:
 
 	// We store a list of rigid bodies that are active for faster physics iteration
 	std::vector<RigidBody*> _rigidBodies;
+
+	// The path that we've saved or loaded this scene from
+	std::string             _filePath;
 
 	// Give RigidBody access to protected fields
 	friend class RigidBody;

@@ -4,7 +4,7 @@
 #include <EnumToString.h>
 #include <GLM/glm.hpp>
 
-#include <bullet/btBulletCollisionCommon.h>
+#include <btBulletCollisionCommon.h>
 
 #include "Utils/GUID.hpp"
 
@@ -31,6 +31,8 @@ ENUM(ColliderType, int,
 	 // much more complex than the other colliders
 	 Terrain   = 9
 );
+
+class GameObject;
 
 // Stores a string that can be fed to ImGui to make a combo box
 // of all collider types
@@ -68,6 +70,13 @@ public:
 	/// </summary>
 	/// <param name="data">The JSON data to unpack into this instance</param>
 	virtual void FromJson(const nlohmann::json& data) = 0;
+
+	/// <summary>
+	/// Allows colliders to perform initialization on object awake, 
+	/// for instance to generate a mesh collider
+	/// </summary>
+	/// <param name="contenxt">The gameobject that this collider is an element of</param>
+	virtual void Awake(GameObject* context) {};
 
 	/// <summary>
 	/// Gets the collider type of this collider instance

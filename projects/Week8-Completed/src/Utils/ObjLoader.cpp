@@ -4,6 +4,7 @@
 #include <sstream>
 #include <fstream>
 #include <iostream>
+#include <GLFW/glfw3.h>
 
 // Borrowed from https://stackoverflow.com/questions/216823/whats-the-best-way-to-trim-stdstring
 #pragma region String Trimming
@@ -68,6 +69,8 @@ VertexArrayObject::Sptr ObjLoader::LoadFromFile(const std::string& filename)
 	glm::vec3 vecData;
 	glm::ivec3 vertexIndices;
 
+	float startTime = glfwGetTime();
+
 	// Read and process the entire file
 	while (file.peek() != EOF) {
 		// Read in the first part of the line (ex: f, v, vn, etc...)
@@ -115,7 +118,9 @@ VertexArrayObject::Sptr ObjLoader::LoadFromFile(const std::string& filename)
 				stream >> vertexIndices.x >> separator >> vertexIndices.y >> separator >> vertexIndices.z;
 
 				// The OBJ format can have negative values, which are a reference from the last added attributes
-				if (vertexIndices.x < 0) { vertexIndices.x = positions.size() - 1 + vertexIndices.x; }
+				if (vertexIndices.x < 0) { vertexIndices.x = positions.size() + 1 + vertexIndices.x; }
+				if (vertexIndices.y < 0) { vertexIndices.y = uvs.size()       + 1 + vertexIndices.y; }
+				if (vertexIndices.z < 0) { vertexIndices.z = normals.size()   + 1 + vertexIndices.z; }
 
 				// OBJ format uses 1-based indices
 				vertexIndices -= glm::ivec3(1);
@@ -152,6 +157,12 @@ VertexArrayObject::Sptr ObjLoader::LoadFromFile(const std::string& filename)
 	// Create the VAO, and add the vertices
 	VertexArrayObject::Sptr result = VertexArrayObject::Create();
 	result->AddVertexBuffer(vertexBuffer, VertexPosNormTexCol::V_DECL);
+
+	result->SetVDecl(VertexPosNormTexCol::V_DECL);
+	
+	// Calculate and trace out how long it took us to load
+	float endTime = glfwGetTime();
+	LOG_TRACE("Loaded OBJ file \"{}\" in {} seconds ({} vertices, {} indices)", filename, endTime - startTime, vertexData.size(), 0);
 
 	return result;
 	//return VertexArrayObject::Create();

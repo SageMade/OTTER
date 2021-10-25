@@ -52,7 +52,7 @@ void GameObject::DrawImGui(float indent) {
 		ImGui::Indent();
 		LABEL_LEFT(ImGui::DragFloat3, "Position", &Position.x, 0.01f);
 		LABEL_LEFT(ImGui::DragFloat3, "Rotation", &Rotation.x, 1.0f);
-		LABEL_LEFT(ImGui::DragFloat3, "Scale", &Scale.x, 0.01f, 0.0f);
+		LABEL_LEFT(ImGui::DragFloat3, "Scale   ", &Scale.x, 0.01f, 0.0f);
 		ImGui::Separator();
 		ImGui::TextUnformatted("Components");
 		ImGui::Separator();

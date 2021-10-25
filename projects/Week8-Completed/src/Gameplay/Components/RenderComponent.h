@@ -11,7 +11,18 @@ public:
 	RenderComponent();
 	RenderComponent(const MeshResource::Sptr& mesh, const Material::Sptr& material);
 
+	/// <summary>
+	/// Gets the mesh resource which contains the mesh and serialization info for
+	/// this render component
+	/// </summary>
+	const MeshResource::Sptr& GetMeshResource() const;
+	/// <summary>
+	/// Gets the VAO of the underlying mesh resource
+	/// </summary>
 	const VertexArrayObject::Sptr& GetMesh() const;
+	/// <summary>
+	/// Gets the material that this renderer is using
+	/// </summary>
 	const Material::Sptr& GetMaterial() const;
 
 	void SetMesh(const MeshResource::Sptr& mesh);
