@@ -17,8 +17,10 @@ class GameObject;
 /// Components must additionally define a static method as such:
 /// 
 /// static std::shared_ptr<Type> FromJson(const nlohmann::json&);
-/// 
 /// where Type is the Type of component
+/// 
+/// They may also use MAKE_TYPENAME(Type) to generate a proper ComponentTypeName()
+/// method
 /// </summary>
 class IComponent : public IResource {
 public:
@@ -30,34 +32,34 @@ public:
 	/// </summary>
 	bool IsEnabled;
 
-	virtual ~IComponent() = default;
+	virtual ~IComponent();
 
 	/// <summary>
 	/// Invoked when a component has been added to a game object, note that this function
 	/// should only perform local setup (i.e never look for game objects or other components)
 	/// </summary>
 	/// <param name="context">The game object that the component belongs to</param>
-	virtual void OnLoad(GameObject* context) { };
+	virtual void OnLoad() { };
 	/// <summary>
 	/// Invoked when the scene has finished loading, and all objects and components
 	/// are set up
 	/// </summary>
 	/// <param name="context">The game object that the component belongs to</param>
-	virtual void Awake(GameObject* context) { };
+	virtual void Awake() { };
 
 	/// <summary>
 	/// Invoked during the update loop
 	/// </summary>
 	/// <param name="context">The game object that the component belongs to</param>
 	/// <param name="deltaTime">The time since the last frame, in seconds</param>
-	virtual void Update(GameObject* context, float deltaTime) {};
+	virtual void Update(float deltaTime) {};
 
 	/// <summary>
 	/// All components should override this to allow us to render component
 	/// info in ImGui for easy editing
 	/// </summary>
 	/// <param name="context">The game object that the component belongs to</param>
-	virtual void RenderImGui(GameObject* context) = 0;
+	virtual void RenderImGui() = 0;
 
 	/// <summary>
 	/// Returns the component's type name
@@ -66,19 +68,63 @@ public:
 	/// </summary>
 	virtual std::string ComponentTypeName() const = 0;
 
+	/// <summary>
+	/// Gets the gameobject that this component is attached to
+	/// </summary>
+	GameObject* GetGameObject() const;
 
-	static inline void LoadBaseJson(const IComponent::Sptr& result, const nlohmann::json& blob) {
-		result->OverrideGUID(Guid(blob["guid"]));
-		result->IsEnabled = blob["enabled"];
-	}
-	static inline void SaveBaseJson(const IComponent::Sptr& instance, nlohmann::json& data) {
-		data["guid"] = instance->GetGUID().str();
-		data["enabled"] = instance->IsEnabled;
+	/// <summary>
+	/// Checks whether this component's gameobject has a component of the given type
+	/// </summary>
+	/// <typeparam name="T">The type of component to search for</typeparam>
+	template <typename T, typename = typename std::enable_if<std::is_base_of<IComponent, T>::value>::type>
+	bool HasComponent() {
+		return _context->Has<T>();
 	}
 
+	/// <summary>
+	/// Gets the component of the given type from the parent gameobject, or nullptr if it does not exist
+	/// </summary>
+	/// <typeparam name="T">The type of component to search for</typeparam>
+	template <typename T, typename = typename std::enable_if<std::is_base_of<IComponent, T>::value>::type>
+	std::shared_ptr<T> GetComponent() {
+		return _context->Get<T>();
+	}
+
+	/// <summary>
+	/// Adds a component of the given type to the parent gameobject. Note that only one component
+	/// of a given type may be attached to a gameobject
+	/// </summary>
+	/// <typeparam name="T">The type of component to add</typeparam>
+	/// <typeparam name="TArgs">The arguments to forward to the component constructor</typeparam>
+	template <typename T, typename ... TArgs>
+	std::shared_ptr<T> Add(TArgs&&... args) {
+		return _context->Add<T>(std::forward<TArgs>(args)...);
+	}
+
+	/// <summary>
+	/// For passing in place of a raw pointer to other APIs like bullet
+	/// </summary>
+	std::weak_ptr<IComponent>& SelfRef();
 
 protected:
-	IComponent() : IsEnabled(true) { }
+	IComponent();
+
+private:
+	// Hide all this stuff so we don't accidentally overwrite it in derived components
+
+	friend class ComponentManager;
+	friend class GameObject;
+
+	std::type_index _realType;
+	GameObject* _context;
+
+	// By storing a weak pointer to ourselves, we can pass a pointer to this
+	// for things like bullet user pointers
+	std::weak_ptr<IComponent> _weakSelfPtr;
+
+	static void LoadBaseJson(const IComponent::Sptr& result, const nlohmann::json& blob);
+	static void SaveBaseJson(const IComponent::Sptr& instance, nlohmann::json& data);
 };
 
 /// <summary>

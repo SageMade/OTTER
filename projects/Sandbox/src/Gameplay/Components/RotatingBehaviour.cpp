@@ -5,11 +5,11 @@
 #include "Utils/ImGuiHelper.h"
 #include "Utils/JsonGlmHelpers.h"
 
-void RotatingBehaviour::Update(GameObject* context, float deltaTime) {
-	context->Rotation += RotationSpeed * deltaTime;
+void RotatingBehaviour::Update(float deltaTime) {
+	GetGameObject()->Rotation += RotationSpeed * deltaTime;
 }
 
-void RotatingBehaviour::RenderImGui(GameObject* context) {
+void RotatingBehaviour::RenderImGui() {
 	LABEL_LEFT(ImGui::DragFloat3, "Speed", &RotationSpeed.x);
 }
 

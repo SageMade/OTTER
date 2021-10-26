@@ -58,6 +58,7 @@
 #include "Gameplay/Physics/Colliders/SphereCollider.h"
 #include "Gameplay/Physics/Colliders/ConvexMeshCollider.h"
 #include "Utils/OptimizedObjLoader.h"
+#include "Gameplay/Physics/TriggerVolume.h"
 
 //#define LOG_GL_NOTIFICATIONS
 
@@ -259,10 +260,11 @@ int main() {
 	ResourceManager::RegisterType<Shader>();
 
 	// Register all of our component types so we can load them from files
-	ComponentRegistry::TryRegisterType<RenderComponent>();
-	ComponentRegistry::TryRegisterType<RigidBody>();
-	ComponentRegistry::TryRegisterType<RotatingBehaviour>();
-	ComponentRegistry::TryRegisterType<JumpBehaviour>();
+	ComponentManager::RegisterType<RenderComponent>();
+	ComponentManager::RegisterType<RigidBody>();
+	ComponentManager::RegisterType<RotatingBehaviour>();
+	ComponentManager::RegisterType<JumpBehaviour>();
+	ComponentManager::RegisterType<TriggerVolume>();
 
 	// GL states, we'll enable depth testing and backface fulling
 	glEnable(GL_DEPTH_TEST);
@@ -386,6 +388,18 @@ int main() {
 			// Kinematic rigid bodies are those controlled by some outside controller
 			// and ONLY collide with dynamic objects
 			RigidBody::Sptr physics = monkey2->Add<RigidBody>(RigidBodyType::Kinematic);
+		}
+
+		GameObject::Sptr trigger = scene->CreateGameObject("Trigger");
+		{
+			TriggerVolume::Sptr volume = trigger->Add<TriggerVolume>();
+			volume->AddCollider(BoxCollider::Create(glm::vec3(3.0f)));
+			volume->SetEnterCallback(nullptr, [](const std::shared_ptr<PhysicsBase>& body) {
+				LOG_INFO("Entered volume! {}", body->GetGameObject()->Name);
+			});
+			volume->SetLeaveCallback(nullptr, [](const std::shared_ptr<PhysicsBase>& body) {
+				LOG_INFO("Left volume! {}", body->GetGameObject()->Name);
+			});
 		}
 
 		// Save the asset manifest for all the resources we just loaded

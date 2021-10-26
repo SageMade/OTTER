@@ -26,15 +26,32 @@ struct Texture2DDescription {
 	/// </summary>
 	WrapMode       VerticalWrap;
 	/// <summary>
+	/// The filter to use when multiple texels will map to a single pixel
+	/// </summary>
+	MinFilter      MinificationFilter;
+	/// <summary>
+	/// The filter to use when one texel will map to multiple pixels
+	/// </summary>
+	MagFilter      MagnificationFilter;
+	/// <summary>
+	/// The level of anisotropic filtering to use when this texture is viewed at an oblique angle
+	/// </summary>
+	/// <see>https://en.wikipedia.org/wiki/Anisotropic_filtering</see>
+	float          MaxAnisotropic;
+	/// <summary>
+	/// True if this texture should generate mip maps (smaller copies of the image with filtering pre-applied)
+	/// </summary>
+	bool           GenerateMipMaps;
+
+	/// <summary>
 	/// The path to the source file for the image, or an empty string if the file has been
 	/// generated
 	/// </summary>
 	std::string    Filename;
 
 	/// <summary>
-	/// Used as a hint for loading texture from files, determines
-	/// the number of channels, default RGBA. Only used to determine
-	/// channel count
+	/// Used as a hint for loading texture from files, determines the number of channels, 
+	/// default RGBA. Only used to determine channel count
 	/// </summary>
 	PixelFormat    FormatHint;
 
@@ -43,10 +60,15 @@ struct Texture2DDescription {
 		Format(InternalFormat::Unknown),
 		HorizontalWrap(WrapMode::Repeat),
 		VerticalWrap(WrapMode::Repeat),
+		MinificationFilter(MinFilter::NearestMipLinear),
+		MagnificationFilter(MagFilter::Linear),
+		MaxAnisotropic(-1.0f),
+		GenerateMipMaps(true),
 		Filename(""),
 		FormatHint(PixelFormat::RGBA)
 	{ }
 };
+
 
 class Texture2D : public ITexture {
 public:
@@ -77,6 +99,8 @@ public:
 	/// Gets the internal format OpenGL is using for this texture
 	/// </summary>
 	InternalFormat GetFormat() const { return _description.Format; }
+	MinFilter GetMinFilter() const { return _description.MinificationFilter; }
+	MagFilter GetMagFilter() const { return _description.MagnificationFilter; }
 	/// <summary>
 	/// Gets the sampler wrap mode along the x/s/u axis for this texture
 	/// </summary>
@@ -123,5 +147,6 @@ protected:
 	void _SetTextureParams();
 
 public:
-	static Texture2D::Sptr LoadFromFile(const std::string& path, const Texture2DDescription& description = Texture2DDescription(), bool forceRgba = true);
+	static Texture2D::Sptr LoadFromFile(const std::string& path, const Texture2DDescription& description = Texture2DDescription());
 };
+

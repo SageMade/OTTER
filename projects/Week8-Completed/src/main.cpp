@@ -56,6 +56,7 @@
 #include "Gameplay/Physics/Colliders/PlaneCollider.h"
 #include "Gameplay/Physics/Colliders/SphereCollider.h"
 #include "Gameplay/Physics/Colliders/ConvexMeshCollider.h"
+#include "../../Sandbox/src/Gameplay/Physics/TriggerVolume.h"
 
 //#define LOG_GL_NOTIFICATIONS
 
@@ -226,6 +227,7 @@ int main() {
 	// Register all of our component types so we can load them from files
 	ComponentManager::RegisterType<RenderComponent>();
 	ComponentManager::RegisterType<RigidBody>();
+	ComponentManager::RegisterType<TriggerVolume>();
 	ComponentManager::RegisterType<RotatingBehaviour>();
 	ComponentManager::RegisterType<JumpBehaviour>();
 
@@ -245,7 +247,7 @@ int main() {
 		// Create our OpenGL resources
 		Shader::Sptr uboShader = ResourceManager::CreateAsset<Shader>(std::unordered_map<ShaderPartType, std::string>{
 			{ ShaderPartType::Vertex, "shaders/vertex_shader.glsl" }, 
-			{ ShaderPartType::Fragment, "shaders/ubo_lights.glsl" }
+			{ ShaderPartType::Fragment, "shaders/frag_blinn_phong_textured.glsl" }
 		}); 
 
 		MeshResource::Sptr monkeyMesh = ResourceManager::CreateAsset<MeshResource>("Monkey.obj");
@@ -365,6 +367,19 @@ int main() {
 			// Kinematic rigid bodies are those controlled by some outside controller
 			// and ONLY collide with dynamic objects
 			RigidBody::Sptr physics = monkey2->Add<RigidBody>(RigidBodyType::Kinematic);
+		}
+
+		GameObject::Sptr trigger = scene->CreateGameObject("Trigger"); 
+		{
+			TriggerVolume::Sptr volume = trigger->Add<TriggerVolume>();
+			volume->AddCollider(BoxCollider::Create(glm::vec3(3.0f)));
+
+			volume->SetEnterCallback(nullptr, [](const std::shared_ptr<PhysicsBase>& body) {
+				LOG_INFO("Entered volume! {}", body->GetGameObject()->Name);
+			});
+			volume->SetLeaveCallback(nullptr, [](const std::shared_ptr<PhysicsBase>& body) {
+				LOG_INFO("Left volume! {}", body->GetGameObject()->Name);
+			});
 		}
 
 		// Save the asset manifest for all the resources we just loaded

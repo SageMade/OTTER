@@ -100,6 +100,11 @@ public:
 		return _context->Add<T>(std::forward<TArgs>(args)...);
 	}
 
+	/// <summary>
+	/// For passing in place of a raw pointer to other APIs like bullet
+	/// </summary>
+	std::weak_ptr<IComponent>& SelfRef();
+
 protected:
 	IComponent();
 
@@ -109,6 +114,10 @@ private:
 
 	std::type_index _realType;
 	GameObject* _context;
+
+	// By storing a weak pointer to ourselves, we can pass a pointer to this
+	// for things like bullet user pointers
+	std::weak_ptr<IComponent> _weakSelfPtr;
 
 	static void LoadBaseJson(const IComponent::Sptr& result, const nlohmann::json& blob);
 	static void SaveBaseJson(const IComponent::Sptr& instance, nlohmann::json& data);

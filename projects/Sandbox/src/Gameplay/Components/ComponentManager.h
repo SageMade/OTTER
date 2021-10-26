@@ -187,7 +187,7 @@ private:
 	// Weak pointers let us store a reference to an object stored by a shared pointer, without
 	// actually increasing the reference count. Thus components will be destroyed at the correct
 	// time (when the only reference is the one stored here).
-	inline static std::unordered_map<std::type_index, std::vector<std::weak_ptr<IComponent>>> _Components;  
+	inline static std::unordered_map<std::type_index, std::vector<std::weak_ptr<IComponent>>> _Components; 
 
 	template <typename T>
 	static IComponent::Sptr ParseTypeFromBlob(const nlohmann::json& blob) {

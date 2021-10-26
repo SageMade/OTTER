@@ -9,10 +9,10 @@ public:
 	JumpBehaviour();
 	virtual ~JumpBehaviour();
 
-	virtual void Awake(GameObject* context) override;
-	virtual void Update(GameObject* context, float deltaTime) override;
+	virtual void Awake() override;
+	virtual void Update(float deltaTime) override;
 
-	virtual void RenderImGui(GameObject* context) override;
+	virtual void RenderImGui() override;
 	MAKE_TYPENAME(JumpBehaviour);
 	virtual nlohmann::json ToJson() const override;
 	static JumpBehaviour::Sptr FromJson(const nlohmann::json& blob);

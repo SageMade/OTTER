@@ -106,6 +106,7 @@ struct GameObject {
 		// Make a new component, forwarding the arguments
 		std::shared_ptr<T> component = ComponentManager::Create<T>(std::forward<TArgs>(args)...);
 		component->_context = this;
+		component->_weakSelfPtr = component;
 
 		// Append it to the binding component's storage, and invoke the OnLoad
 		Components.push_back(component);

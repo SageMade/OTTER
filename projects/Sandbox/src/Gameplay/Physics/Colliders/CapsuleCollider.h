@@ -1,6 +1,9 @@
 #pragma once
-#include "Gameplay/Physics/Collider.h"
+#include "Gameplay/Physics/ICollider.h"
 
+/// <summary>
+/// Represents a capsule collider with a radius and a height
+/// </summary>
 class CapsuleCollider final :  public ICollider {
 public:
 	typedef std::shared_ptr<CapsuleCollider> Sptr;

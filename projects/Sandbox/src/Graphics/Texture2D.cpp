@@ -4,21 +4,14 @@
 #include "GLM/glm.hpp"
 #include "Utils/JsonGlmHelpers.h"
 
-nlohmann::json Texture2D::ToJson() const {
-	return {
-		{ "filename", _description.Filename },
-		{ "wrap_s",  ~_description.HorizontalWrap },
-		{ "wrap_t",  ~_description.VerticalWrap },
-	};
-}
-
-Texture2D::Sptr Texture2D::FromJson(const nlohmann::json& data)
-{
-	Texture2DDescription descr = Texture2DDescription();
-	descr.Filename = data["filename"];
-	descr.HorizontalWrap = JsonParseEnum(WrapMode, data, "wrap_s", WrapMode::ClampToEdge);
-	descr.VerticalWrap   = JsonParseEnum(WrapMode, data, "wrap_t", WrapMode::ClampToEdge);
-	return std::make_shared<Texture2D>(descr);
+/// <summary>
+/// Get the number of mipmap levels required for a texture of the given size
+/// </summary>
+/// <param name="width">The width of the texture in pixels</param>
+/// <param name="height">The height of the texture in pixels</param>
+/// <returns>Number of mip levels required for the texture</returns>
+inline int CalcRequiredMipLevels(int width, int height) {
+	return (1 + floor(log2(glm::max(width, height))));
 }
 
 Texture2D::Texture2D(const Texture2DDescription& description) : ITexture(TextureType::_2D) {
@@ -33,7 +26,8 @@ Texture2D::Texture2D(const std::string& filePath) : ITexture(TextureType::_2D) {
 	_LoadDataFromFile();
 }
 
-void Texture2D::LoadData(uint32_t width, uint32_t height, PixelFormat format, PixelType type, void* data, uint32_t offsetX, uint32_t offsetY) {
+void Texture2D::LoadData(uint32_t width, uint32_t height, PixelFormat format, PixelType type, void* data, uint32_t offsetX, uint32_t offsetY)
+{
 	// Ensure the rectangle we're setting is within the bounds of the image
 	LOG_ASSERT((width + offsetX) <= _description.Width, "Pixel bounds are outside of the X extents of the image!");
 	LOG_ASSERT((height + offsetY) <= _description.Height, "Pixel bounds are outside of the Y extents of the image!");
@@ -45,6 +39,43 @@ void Texture2D::LoadData(uint32_t width, uint32_t height, PixelFormat format, Pi
 
 	// Upload our data to our image
 	glTextureSubImage2D(_handle, 0, offsetX, offsetY, width, height, (GLenum)format, (GLenum)type, data);
+
+	// If requested, generate mip-maps for our texture
+	if (_description.GenerateMipMaps) {
+		glGenerateTextureMipmap(_handle);
+	}
+}
+
+void Texture2D::_SetTextureParams() {
+	// If the anisotropy is negative, we assume that we want max anisotropy
+	if (_description.MaxAnisotropic < 0.0f) {
+		_description.MaxAnisotropic = ITexture::GetLimits().MAX_ANISOTROPY;
+	}
+
+	// Make sure the size is greater than zero and that we have a format specified before trying to set parameters
+	if ((_description.Width * _description.Height > 0) && _description.Format != InternalFormat::Unknown) {
+		// Calculate how many layers of storage to allocate based on whether mipmaps are enabled or not
+		int layers = _description.GenerateMipMaps ? CalcRequiredMipLevels(_description.Width, _description.Height) : 1;
+		glTextureStorage2D(_handle, layers, (GLenum)_description.Format, _description.Width, _description.Height);
+
+		glTextureParameteri(_handle, GL_TEXTURE_WRAP_S, (GLenum)_description.HorizontalWrap);
+		glTextureParameteri(_handle, GL_TEXTURE_WRAP_T, (GLenum)_description.VerticalWrap);
+		glTextureParameteri(_handle, GL_TEXTURE_MIN_FILTER, (GLenum)_description.MinificationFilter);
+		glTextureParameteri(_handle, GL_TEXTURE_MAG_FILTER, (GLenum)_description.MagnificationFilter);
+		glTextureParameterf(_handle, GL_TEXTURE_MAX_ANISOTROPY, _description.MaxAnisotropic);
+	}
+}
+
+Texture2D::Sptr Texture2D::LoadFromFile(const std::string& path, const Texture2DDescription& description)
+{
+	// Create a copy of the description and change filename to the path
+	Texture2DDescription desc = description;
+	desc.Filename = path;
+
+	// Create a texture from the description (it'll load the file)
+	Texture2D::Sptr result = std::make_shared<Texture2D>(desc);
+
+	return result;
 }
 
 void Texture2D::_LoadDataFromFile() {
@@ -62,7 +93,7 @@ void Texture2D::_LoadDataFromFile() {
 		// If we could not load any data, warn and return null
 		if (data == nullptr) {
 			LOG_WARN("STBI Failed to load image from \"{}\"", _description.Filename);
-			return ;
+			return;
 		}
 
 		// We should estimate a good format for our data
@@ -119,24 +150,26 @@ void Texture2D::_LoadDataFromFile() {
 	}
 }
 
-void Texture2D::_SetTextureParams() {
-	// Make sure the size is greater than zero and that we have a format specified before trying to set parameters
-	if ((_description.Width * _description.Height > 0) && _description.Format != InternalFormat::Unknown) {
-		// Allocates the memory for our texture
-		glTextureStorage2D(_handle, 1, (GLenum)_description.Format, _description.Width, _description.Height);
-
-		glTextureParameteri(_handle, GL_TEXTURE_WRAP_S, (GLenum)_description.HorizontalWrap);
-		glTextureParameteri(_handle, GL_TEXTURE_WRAP_T, (GLenum)_description.VerticalWrap);
-	}
+nlohmann::json Texture2D::ToJson() const {
+	return {
+		{ "filename",          _description.Filename },
+		{ "wrap_s",           ~_description.HorizontalWrap },
+		{ "wrap_t",           ~_description.VerticalWrap },
+		{ "filter_min",       ~_description.MinificationFilter },
+		{ "filter_mag",       ~_description.MagnificationFilter },
+		{ "anisotropic",       _description.MaxAnisotropic },
+		{ "generate_mipmaps",  _description.GenerateMipMaps },
+	};
 }
 
-Texture2D::Sptr Texture2D::LoadFromFile(const std::string& path, const Texture2DDescription& description, bool forceRgba) {
-	// Create a copy of the description and change filename to the path
-	Texture2DDescription desc = description;
-	desc.Filename = path;
-
-	// Create a texture from the description (it'll load the file)
-	Texture2D::Sptr result = std::make_shared<Texture2D>(desc);
-
-	return result;
+Texture2D::Sptr Texture2D::FromJson(const nlohmann::json& data) {
+	Texture2DDescription descr = Texture2DDescription();
+	descr.Filename            = JsonGet(data, "filename", std::string());
+	descr.HorizontalWrap      = JsonParseEnum(WrapMode, data, "wrap_s", WrapMode::ClampToEdge);
+	descr.VerticalWrap        = JsonParseEnum(WrapMode, data, "wrap_t", WrapMode::ClampToEdge);
+	descr.MinificationFilter  = JsonParseEnum(MinFilter, data, "filter_min", MinFilter::NearestMipNearest);
+	descr.MagnificationFilter = JsonParseEnum(MagFilter, data, "filter_mag", MagFilter::Linear);
+	descr.MaxAnisotropic      = JsonGet(data, "anisotropic", 0.0f);
+	descr.GenerateMipMaps     = JsonGet(data, "generate_mipmaps", false);
+	return std::make_shared<Texture2D>(descr);
 }

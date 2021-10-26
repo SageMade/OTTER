@@ -1,4 +1,4 @@
-#include "Gameplay/Physics/Collider.h"
+#include "Gameplay/Physics/ICollider.h"
 
 #define GLM_ENABLE_EXPERIMENTAL
 #include <GLM/gtx/common.hpp> // for fmod (floating modulus)

@@ -1,5 +1,5 @@
 #pragma once
-#include "Gameplay/Physics/Collider.h"
+#include "Gameplay/Physics/ICollider.h"
 
 class SphereCollider final : public ICollider {
 public:

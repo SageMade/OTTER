@@ -34,14 +34,14 @@ Scene* GameObject::GetScene() const {
 
 void GameObject::Awake() {
 	for (auto& component : Components) {
-		component->Awake(this);
+		component->Awake();
 	}
 }
 
 void GameObject::Update(float dt) {
 	for (auto& component : Components) {
 		if (component->IsEnabled) {
-			component->Update(this, dt);
+			component->Update(dt);
 		}
 	}
 }
@@ -59,7 +59,7 @@ void GameObject::DrawImGui(float indent) {
 		for (auto& component : Components) {
 			if (ImGui::CollapsingHeader(component->ComponentTypeName().c_str())) {
 				ImGui::PushID(component.get()); 
-				component->RenderImGui(this);
+				component->RenderImGui();
 				ImGui::PopID();
 			}
 		}
@@ -89,11 +89,13 @@ GameObject::Sptr GameObject::FromJson(const nlohmann::json& data, Scene* scene)
 		// We need to reference the component registry to load our components
 		// based on the type name (note that all component types need to be
 		// registered at the start of the application)
-		IComponent::Sptr component = ComponentRegistry::Load(typeName, value);
+		IComponent::Sptr component = ComponentManager::Load(typeName, value);
+		component->_context = result.get();
+		component->_weakSelfPtr = component;
 
 		// Add component to object and allow it to perform self initialization
 		result->Components.push_back(component);
-		component->OnLoad(result.get());
+		component->OnLoad();
 	}
 	return result;
 }

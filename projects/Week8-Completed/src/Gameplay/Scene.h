@@ -1,5 +1,6 @@
 #pragma once
 #include <btBulletDynamicsCommon.h>
+#include "BulletCollision/CollisionDispatch/btGhostObject.h"
 
 #include "Gameplay/Camera.h"
 #include "Gameplay/GameObject.h"
@@ -115,6 +116,11 @@ public:
 	void DrawAllGameObjectGUIs();
 
 	/// <summary>
+	/// Gets the scene's Bullet physics world
+	/// </summary>
+	btDynamicsWorld* GetPhysicsWorld() const;
+
+	/// <summary>
 	/// Loads a scene from a JSON blob
 	/// </summary>
 	static Scene::Sptr FromJson(const nlohmann::json& data);
@@ -150,12 +156,11 @@ protected:
 	btBroadphaseInterface*    _broadphaseInterface;
 	// Resolves contraints (ex: hinge constraints, angle axis, etc...)
 	btConstraintSolver*       _constraintSolver;
+	// this is what allows us to get our pairs from the trigger volumes
+	btGhostPairCallback*      _ghostCallback;
 
 	// The path that we've saved or loaded this scene from
 	std::string             _filePath;
-
-	// Give RigidBody access to protected fields
-	friend class RigidBody;
 
 	// Our physics scene's global gravity, default matches earth's gravity (m/s^2)
 	glm::vec3 _gravity;

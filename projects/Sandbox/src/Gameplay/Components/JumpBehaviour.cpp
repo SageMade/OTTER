@@ -4,15 +4,15 @@
 #include "Gameplay/Scene.h"
 #include "Utils/ImGuiHelper.h"
 
-void JumpBehaviour::Awake(GameObject* context)
+void JumpBehaviour::Awake()
 {
-	_body = context->Get<RigidBody>();
+	_body = GetComponent<RigidBody>();
 	if (_body == nullptr) {
 		IsEnabled = false;
 	}
 }
 
-void JumpBehaviour::RenderImGui(GameObject* context) {
+void JumpBehaviour::RenderImGui() {
 	LABEL_LEFT(ImGui::DragFloat, "Impulse", &_impulse, 1.0f);
 }
 
@@ -35,8 +35,8 @@ JumpBehaviour::Sptr JumpBehaviour::FromJson(const nlohmann::json& blob) {
 	return result;
 }
 
-void JumpBehaviour::Update(GameObject* context, float deltaTime) {
-	bool pressed = glfwGetKey(context->GetScene()->Window, GLFW_KEY_SPACE);
+void JumpBehaviour::Update(float deltaTime) {
+	bool pressed = glfwGetKey(GetGameObject()->GetScene()->Window, GLFW_KEY_SPACE);
 	if (pressed) {
 		if (_isPressed == false) {
 			_body->ApplyImpulse(glm::vec3(0.0f, 0.0f, _impulse));

@@ -1,9 +1,8 @@
 #pragma once
-#include "Gameplay/Physics/Collider.h"
+#include "Gameplay/Physics/ICollider.h"
 
 /// <summary>
-/// Represents a simple box collider that has extends around
-/// a point
+/// Represents a simple box collider that has extends around the origin point
 /// </summary>
 class BoxCollider final : public ICollider {
 public:

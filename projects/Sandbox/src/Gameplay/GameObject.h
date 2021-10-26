@@ -9,8 +9,8 @@
 #include "GLM/gtx/common.hpp"
 
 // Others
-#include "Components/IComponent.h"
-#include "Components/ComponentRegistry.h"
+#include "Gameplay/Components/IComponent.h"
+#include "Gameplay/Components/ComponentManager.h"
 
 // Predeclaration for Scene
 class Scene;
@@ -102,13 +102,17 @@ struct GameObject {
 	std::shared_ptr<T> Add(TArgs&&... args) {
 		static_assert(is_valid_component<T>(), "Type is not a valid component type!");
 		LOG_ASSERT(!Has<T>(), "Cannot add 2 instances of a component type to a game object");
-		ComponentRegistry::TryRegisterType<T>();
+
 		// Make a new component, forwarding the arguments
-		const std::shared_ptr<IComponent> component = std::make_shared<T>(std::forward<TArgs>(args)...);
+		std::shared_ptr<T> component = ComponentManager::Create<T>(std::forward<TArgs>(args)...);
+		component->_context = this;
+		component->_weakSelfPtr = component;
+
 		// Append it to the binding component's storage, and invoke the OnLoad
 		Components.push_back(component);
-		component->OnLoad(this);
-		return std::dynamic_pointer_cast<T>(component);
+		component->OnLoad();
+
+		return component;
 	}
 
 	/// <summary>
@@ -120,7 +124,6 @@ struct GameObject {
 	/// Loads a render object from a JSON blob
 	/// </summary>
 	static GameObject::Sptr FromJson(const nlohmann::json& data, Scene* scene);
-
 	/// <summary>
 	/// Converts this object into it's JSON representation for storage
 	/// </summary>

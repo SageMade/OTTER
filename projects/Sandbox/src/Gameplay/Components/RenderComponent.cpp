@@ -58,7 +58,7 @@ RenderComponent::Sptr RenderComponent::FromJson(const nlohmann::json& data) {
 	return result;
 }
 
-void RenderComponent::RenderImGui(GameObject* context) {
+void RenderComponent::RenderImGui() {
 	ImGui::Text("Indexed:   %s", _mesh->Mesh != nullptr ? (_mesh->Mesh->GetIndexBuffer() != nullptr ? "true" : "false") : "N/A");
 	ImGui::Text("Triangles: %d", _mesh->Mesh != nullptr ? (_mesh->Mesh->GetElementCount() / 3) : 0);
 	ImGui::Text("Source:    %s", _mesh->Filename.empty() ? "Generated" : _mesh->Filename.c_str());

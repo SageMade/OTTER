@@ -152,7 +152,7 @@ protected:
 
 private:
 	// Allow RigidBody to access protected and private members
-	friend class RigidBody;
+	friend class PhysicsBase;
 
 	// These are private so derived classes don't accidentally use these
 	glm::vec3 _position;

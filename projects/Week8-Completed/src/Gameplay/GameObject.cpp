@@ -91,6 +91,7 @@ GameObject::Sptr GameObject::FromJson(const nlohmann::json& data, Scene* scene)
 		// registered at the start of the application)
 		IComponent::Sptr component = ComponentManager::Load(typeName, value);
 		component->_context = result.get();
+		component->_weakSelfPtr = component;
 
 		// Add component to object and allow it to perform self initialization
 		result->Components.push_back(component);

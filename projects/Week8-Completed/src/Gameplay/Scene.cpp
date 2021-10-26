@@ -6,6 +6,7 @@
 #include "Utils/GlmBulletConversions.h"
 
 #include "Gameplay/Physics/RigidBody.h"
+#include "Gameplay/Physics/TriggerVolume.h"
 
 Scene::Scene() :
 	Objects(std::vector<GameObject::Sptr>()),
@@ -77,10 +78,16 @@ void Scene::DoPhysics(float dt) {
 		ComponentManager::Each<RigidBody>([=](const std::shared_ptr<RigidBody>& body) {
 			body->PhysicsPreStep(dt);
 		});
+		ComponentManager::Each<TriggerVolume>([=](const std::shared_ptr<TriggerVolume>& body) {
+			body->PhysicsPreStep(dt);
+		}); 
 
 		_physicsWorld->stepSimulation(dt, 10);
 
 		ComponentManager::Each<RigidBody>([=](const std::shared_ptr<RigidBody>& body) {
+			body->PhysicsPostStep(dt);
+		});
+		ComponentManager::Each<TriggerVolume>([=](const std::shared_ptr<TriggerVolume>& body) {
 			body->PhysicsPostStep(dt);
 		});
 	}
@@ -112,6 +119,10 @@ void Scene::SetupShaderAndLights() {
 	for (int ix = 0; ix < Lights.size(); ix++) {
 		SetShaderLight(ix, true);
 	}
+}
+
+btDynamicsWorld* Scene::GetPhysicsWorld() const {
+	return _physicsWorld;
 }
 
 Scene::Sptr Scene::FromJson(const nlohmann::json& data)
@@ -198,7 +209,9 @@ GameObject::Sptr Scene::GetObjectByIndex(int index) const {
 void Scene::_InitPhysics() {
 	_collisionConfig = new btDefaultCollisionConfiguration();
 	_collisionDispatcher = new btCollisionDispatcher(_collisionConfig);
+	_ghostCallback = new btGhostPairCallback();
 	_broadphaseInterface = new btDbvtBroadphase();
+	_broadphaseInterface->getOverlappingPairCache()->setInternalGhostPairCallback(_ghostCallback);
 	_constraintSolver = new btSequentialImpulseConstraintSolver();
 	_physicsWorld = new btDiscreteDynamicsWorld(
 		_collisionDispatcher,
@@ -214,6 +227,7 @@ void Scene::_CleanupPhysics() {
 	delete _physicsWorld;
 	delete _constraintSolver;
 	delete _broadphaseInterface;
+	delete _ghostCallback;
 	delete _collisionDispatcher;
 	delete _collisionConfig;
 }

@@ -25,10 +25,10 @@ ENUM(ColliderType, int,
 	 Cylinder  = 6,
 	 // Convex meshes have no inward faces, ie no caves
 	 ConvexMesh = 7,
-	 // Concave meshes can have inward faces
+	 // Concave meshes can have inward faces (NOT IMPLEMENTED)
 	 ConcaveMesh = 8,
 	 // Used for creating terrain colliders,
-	 // much more complex than the other colliders
+	 // much more complex than the other colliders (NOT IMPLEMENTED)
 	 Terrain   = 9
 );
 
@@ -152,7 +152,7 @@ protected:
 
 private:
 	// Allow RigidBody to access protected and private members
-	friend class RigidBody;
+	friend class PhysicsBase;
 
 	// These are private so derived classes don't accidentally use these
 	glm::vec3 _position;
