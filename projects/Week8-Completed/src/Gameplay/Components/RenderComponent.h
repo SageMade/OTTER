@@ -30,14 +30,12 @@ public:
 	void SetMaterial(Guid mat);
 	void SetMesh(Guid mesh);
 
-	virtual void RenderImGui(GameObject* context) override;
+	virtual void RenderImGui() override;
 
 	virtual nlohmann::json ToJson() const override;
 	static RenderComponent::Sptr FromJson(const nlohmann::json& data);
 
 	MAKE_TYPENAME(RenderComponent);
-
-
 
 protected:
 	// The object's mesh

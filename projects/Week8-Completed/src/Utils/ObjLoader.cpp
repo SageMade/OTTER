@@ -6,46 +6,7 @@
 #include <iostream>
 #include <GLFW/glfw3.h>
 
-// Borrowed from https://stackoverflow.com/questions/216823/whats-the-best-way-to-trim-stdstring
-#pragma region String Trimming
-
-// trim from start (in place)
-static inline void ltrim(std::string& s) {
-	s.erase(s.begin(), std::find_if(s.begin(), s.end(), [](int ch) {
-		return !std::isspace(ch);
-		}));
-}
-
-// trim from end (in place)
-static inline void rtrim(std::string& s) {
-	s.erase(std::find_if(s.rbegin(), s.rend(), [](int ch) {
-		return !std::isspace(ch);
-		}).base(), s.end());
-}
-
-// trim from both ends (in place)
-static inline void trim(std::string& s) {
-	ltrim(s);
-	rtrim(s);
-}
-
-/// <summary>
-/// Splits an std::string based on a delimiter
-/// </summary>
-/// <param name="text">The text to split</param>
-/// <param name="delimiter">The delimiter to split the string on</param>
-/// <returns>A vector of tokens extracted from the string</returns>
-static inline std::vector<std::string> SplitString(const std::string& text, const std::string& delimiter) {
-	std::vector<std::string> result;
-	size_t pos = 0;
-	while ((pos = text.find(delimiter, pos)) != std::string::npos) {
-		result.push_back(text.substr(0, pos));
-		pos += delimiter.length();
-	}
-	return result;
-}
-
-#pragma endregion 
+#include "Utils/StringUtils.h"
 
 VertexArrayObject::Sptr ObjLoader::LoadFromFile(const std::string& filename)
 {
@@ -107,7 +68,7 @@ VertexArrayObject::Sptr ObjLoader::LoadFromFile(const std::string& filename)
 			// Read the rest of the line from the file
 			std::getline(file, line);
 			// Trim whitespace from either end of the line
-			trim(line);
+			StringTools::Trim(line);
 			// Create a string stream so we can use streaming operators on it
 			std::stringstream stream = std::stringstream(line);
 

@@ -1,11 +1,7 @@
 #include "MeshResource.h"
 #include <filesystem>
 
-#ifdef OPTIMIZED_OBJ_LOADER
-#include "Utils/OptimizedObjLoader.h" 
-#else
 #include "Utils/ObjLoader.h"
-#endif
 
 MeshResource::MeshResource() :
 	IResource(),
@@ -22,11 +18,7 @@ MeshResource::MeshResource(const std::string& filename) :
 	Mesh(nullptr),
 	BulletTriMesh(nullptr)  
 {
-	#ifdef OPTIMIZED_OBJ_LOADER
-	Mesh = OptimizedObjLoader::LoadFromFile(filename);
-	#else
 	Mesh = ObjLoader::LoadFromFile(filename);
-	#endif
 }
 
 MeshResource::~MeshResource() = default;

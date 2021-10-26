@@ -3,12 +3,7 @@
 #include "Graphics/VertexArrayObject.h"
 #include "Utils/MeshFactory.h"
 
-// You are NOT allowed to use the optimized loader in your GDW
-// This define lets us easily disable the optimized loader without
-// having to do too much code spelunking, by simply commenting out
-// the following line
-#define OPTIMIZED_OBJ_LOADER
-
+// bullet triangle mesh pre-declaration
 class btTriangleMesh;
 
 /// <summary>
@@ -20,18 +15,32 @@ class MeshResource : public IResource {
 public:
 	typedef std::shared_ptr<MeshResource> Sptr;
 
+	// Default constructor
 	MeshResource();
+	// Constructor for loading from file
 	MeshResource(const std::string& filename);
 
 	virtual ~MeshResource();
 
-	std::string                   Filename;
-	VertexArrayObject::Sptr       Mesh;
-	std::vector<MeshBuilderParam> MeshBuilderParams;
+	// The path that the mesh was loaded from, or empty to indicate that it was generated
+	// note that this will override any mesh builder params
+	std::string                     Filename;
+	// The mesh builder parameters if this mesh resource is created at runtime
+	std::vector<MeshBuilderParam>   MeshBuilderParams;
 
+	// The VAO for rendering this mesh in OpenGL
+	VertexArrayObject::Sptr         Mesh;
+	// Allows for bullet to generate a triangle mesh from this mesh and cache it
 	std::shared_ptr<btTriangleMesh> BulletTriMesh;
 
+	/// <summary>
+	/// Generates a new mesh from the mesh builder parameters
+	/// </summary>
 	void GenerateMesh();
+	/// <summary>
+	/// Adds a new mesh builder parameter to the mesh
+	/// </summary>
+	/// <param name="param">The parameter to add</param>
 	void AddParam(const MeshBuilderParam& param);
 
 	virtual nlohmann::json ToJson() const override;

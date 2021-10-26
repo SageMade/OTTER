@@ -36,12 +36,6 @@ RigidBody::~RigidBody() {
 		// Remove from the physics world
 		_scene->_physicsWorld->removeRigidBody(_body);
 
-		// Remove from the scene's list of bodies
-		auto& it = std::find(_scene->_rigidBodies.begin(), _scene->_rigidBodies.end(), this);
-		if (it != _scene->_rigidBodies.end()) {
-			_scene->_rigidBodies.erase(it);
-		}
-
 		// Clean up all our memory
 		delete _motionState;
 		delete _shape;
@@ -104,7 +98,7 @@ int RigidBody::GetCollisionMask() const {
 
 ICollider::Sptr RigidBody::AddCollider(const ICollider::Sptr& collider) {
 	if (_body != nullptr) {
-		collider->Awake(_context);
+		collider->Awake(GetGameObject());
 	}
 	_colliders.push_back(collider);
 	_isShapeDirty = true;
@@ -178,14 +172,15 @@ void RigidBody::PhysicsPreStep(float dt) {
 	_HandleStateDirty();
 
 	if (_type != RigidBodyType::Static) {
+		GameObject* context = GetGameObject();
 		// Copy our transform info from OpenGL
 		btTransform transform;
 		transform.setIdentity();
-		transform.setOrigin(ToBt(_context->Position));
-		transform.setRotation(ToBt(glm::quat(glm::radians(_context->Rotation))));
-		if (_context->Scale != _prevScale) {
+		transform.setOrigin(ToBt(context->Position));
+		transform.setRotation(ToBt(glm::quat(glm::radians(context->Rotation))));
+		if (context->Scale != _prevScale) {
 			_scene->_physicsWorld->getBroadphase()->getOverlappingPairCache()->cleanProxyFromPairs(_body->getBroadphaseHandle(), _scene->_physicsWorld->getDispatcher());
-			_prevScale = _context->Scale;
+			_prevScale = context->Scale;
 		}
 
 		// Copy to body and to it's motion state
@@ -210,14 +205,15 @@ void RigidBody::PhysicsPostStep(float dt) {
 			_body->getMotionState()->getWorldTransform(transform);
 		}
 
+		GameObject* context = GetGameObject();
 		// Update the pos and rotation params
-		_context->Position = ToGlm(transform.getOrigin());
-		_context->Rotation = glm::degrees(glm::eulerAngles(ToGlm(transform.getRotation())));
+		context->Position = ToGlm(transform.getOrigin());
+		context->Rotation = glm::degrees(glm::eulerAngles(ToGlm(transform.getRotation())));
 	}
 }
 
-void RigidBody::Awake(GameObject* context) {
-	_context = context;
+void RigidBody::Awake() {
+	GameObject* context = GetGameObject();
 	_scene = context->GetScene();
 	_prevScale = context->Scale;
 
@@ -265,12 +261,9 @@ void RigidBody::Awake(GameObject* context) {
 	// Copy over group and mask info
 	_body->getBroadphaseProxy()->m_collisionFilterGroup = _collisionGroup;
 	_body->getBroadphaseProxy()->m_collisionFilterMask  = _collisionMask;
-
-	// Store ourselves in the scene's list of rigid bodies
-	_scene->_rigidBodies.push_back(this);
 }
 
-void RigidBody::RenderImGui(GameObject* context)
+void RigidBody::RenderImGui()
 {
 	_isMassDirty |= LABEL_LEFT(ImGui::DragFloat, "Mass", &_mass, 0.1f, 0.0f);
 	// Our colliders header

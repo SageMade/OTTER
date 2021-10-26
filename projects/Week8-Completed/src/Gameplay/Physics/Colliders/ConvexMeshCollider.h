@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Gameplay/Physics/Collider.h"
+#include "Gameplay/Physics/ICollider.h"
 
 class ConvexMeshCollider final : public ICollider {
 public:

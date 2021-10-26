@@ -26,7 +26,6 @@
 #include "Graphics/Shader.h"
 #include "Graphics/Texture2D.h"
 #include "Graphics/VertexTypes.h"
-#include "Graphics/UniformBuffer.h"
 
 // Utilities
 #include "Utils/MeshBuilder.h"
@@ -57,7 +56,6 @@
 #include "Gameplay/Physics/Colliders/PlaneCollider.h"
 #include "Gameplay/Physics/Colliders/SphereCollider.h"
 #include "Gameplay/Physics/Colliders/ConvexMeshCollider.h"
-#include "Utils/OptimizedObjLoader.h"
 
 //#define LOG_GL_NOTIFICATIONS
 
@@ -197,39 +195,6 @@ bool DrawLightImGui(const Scene::Sptr& scene, const char* title, int ix) {
 	return result;
 }
 
-#ifdef OPTIMIZED_OBJ_LOADER
-/// <summary>
-/// Draws the UI for our mesh conversion from OBJ to a binary format
-/// </summary>
-void DrawMeshConversionGui() {
-	// Buffers for input, static means they persist between calls
-	static char inPath[256];
-	static char outPath[256];
-	// The warning text
-	static std::string warnText = "No Warnings";
-
-	if (ImGui::CollapsingHeader("Mesh to Binary Conversion")) {
-		// Input and output paths
-		ImGui::InputText("In", inPath, 256);
-		ImGui::InputText("Out", outPath, 256);
-				
-		if (ImGui::Button("Convert to Binary")) {
-			// If the file exists, perform conversion and clear warnings
-			if (std::filesystem::exists(inPath)) {
-				OptimizedObjLoader::ConvertToBinary(inPath, outPath);
-				warnText = "No Warnings";
-			}
-			// File does not exist, show warning
-			else {
-				warnText = "The specified file does not exist!";
-			}
-		}
-		// Show the warning
-		ImGui::TextUnformatted(warnText.c_str());
-	}
-}
-#endif
-
 int main() {
 	Logger::Init(); // We'll borrow the logger from the toolkit, but we need to initialize it
 
@@ -259,10 +224,10 @@ int main() {
 	ResourceManager::RegisterType<Shader>();
 
 	// Register all of our component types so we can load them from files
-	ComponentRegistry::TryRegisterType<RenderComponent>();
-	ComponentRegistry::TryRegisterType<RigidBody>();
-	ComponentRegistry::TryRegisterType<RotatingBehaviour>();
-	ComponentRegistry::TryRegisterType<JumpBehaviour>();
+	ComponentManager::RegisterType<RenderComponent>();
+	ComponentManager::RegisterType<RigidBody>();
+	ComponentManager::RegisterType<RotatingBehaviour>();
+	ComponentManager::RegisterType<JumpBehaviour>();
 
 	// GL states, we'll enable depth testing and backface fulling
 	glEnable(GL_DEPTH_TEST);
@@ -283,8 +248,7 @@ int main() {
 			{ ShaderPartType::Fragment, "shaders/ubo_lights.glsl" }
 		}); 
 
-		MeshResource::Sptr monkeyMesh = ResourceManager::CreateAsset<MeshResource>("Monkey.bobj");
-		MeshResource::Sptr testMesh   = ResourceManager::CreateAsset<MeshResource>("Bed_01.bobj");
+		MeshResource::Sptr monkeyMesh = ResourceManager::CreateAsset<MeshResource>("Monkey.obj");
 		Texture2D::Sptr    boxTexture = ResourceManager::CreateAsset<Texture2D>("textures/box-diffuse.png");
 		Texture2D::Sptr    monkeyTex  = ResourceManager::CreateAsset<Texture2D>("textures/monkey-uvMap.png");  
 		 
@@ -328,37 +292,50 @@ int main() {
 		scene->Camera->SetPosition(glm::vec3(0, 4, 4));
 		scene->Camera->LookAt(glm::vec3(0.0f));
 
+		// We'll create a mesh that is a simple plane that we can resize later
+		MeshResource::Sptr planeMesh = ResourceManager::CreateAsset<MeshResource>();
+		planeMesh->AddParam(MeshBuilderParam::CreatePlane(ZERO, UNIT_Z, UNIT_X, glm::vec2(1.0f)));
+		planeMesh->GenerateMesh();
+
 		// Set up all our sample objects
 		GameObject::Sptr plane = scene->CreateGameObject("Plane");
 		{
-			MeshResource::Sptr meshRes = ResourceManager::CreateAsset<MeshResource>();
-			meshRes->AddParam(MeshBuilderParam::CreatePlane(ZERO, UNIT_Z, UNIT_X, glm::vec2(10.0f)));
-			meshRes->GenerateMesh();
+			// Scale up the plane
+			plane->Scale = glm::vec3(10.0F);
 
+			// Create and attach a RenderComponent to the object to draw our mesh
 			RenderComponent::Sptr renderer = plane->Add<RenderComponent>();
-			renderer->SetMesh(meshRes);
+			renderer->SetMesh(planeMesh);
 			renderer->SetMaterial(boxMaterial);
 
+			// Attach a plane collider that extends infinitely along the X/Y axis
 			RigidBody::Sptr physics = plane->Add<RigidBody>(/*static by default*/);
 			physics->AddCollider(PlaneCollider::Create());
 		}
 
 		GameObject::Sptr square = scene->CreateGameObject("Square");
 		{
-			MeshResource::Sptr meshRes = ResourceManager::CreateAsset<MeshResource>();
-			meshRes->AddParam(MeshBuilderParam::CreatePlane(ZERO, UNIT_Z, UNIT_X, glm::vec2(0.5f)));
-			meshRes->GenerateMesh();
-
-			RenderComponent::Sptr renderer = square->Add<RenderComponent>();
-			renderer->SetMesh(meshRes);
-			renderer->SetMaterial(boxMaterial);
+			// Set position in the scene
 			square->Position = glm::vec3(0.0f, 0.0f, 2.0f);
+			// Scale down the plane
+			square->Scale = glm::vec3(0.5f);
+
+			// Create and attach a render component
+			RenderComponent::Sptr renderer = square->Add<RenderComponent>();
+			renderer->SetMesh(planeMesh);
+			renderer->SetMaterial(boxMaterial);
+
+			// This object is a renderable only, it doesn't have any behaviours or
+			// physics bodies attached!
 		}
 
 		GameObject::Sptr monkey1 = scene->CreateGameObject("Monkey 1");
 		{
-			RenderComponent::Sptr renderer = monkey1->Add<RenderComponent>();
+			// Set position in the scene
 			monkey1->Position = glm::vec3(1.5f, 0.0f, 1.0f);
+
+			// Create and attach a renderer for the monkey
+			RenderComponent::Sptr renderer = monkey1->Add<RenderComponent>();
 			renderer->SetMesh(monkeyMesh);
 			renderer->SetMaterial(monkeyMaterial);
 
@@ -372,14 +349,16 @@ int main() {
 
 		GameObject::Sptr monkey2 = scene->CreateGameObject("Complex Object");
 		{
-			RenderComponent::Sptr renderer = monkey2->Add<RenderComponent>();
+			// Set and rotation position in the scene
 			monkey2->Position = glm::vec3(-1.5f, 0.0f, 1.0f);
-			renderer->SetMesh(testMesh);
-			renderer->SetMaterial(boxMaterial);
 			monkey2->Rotation.x = 90.0f;
-			monkey2->Rotation.z = 180.0f;
-			monkey2->Scale = glm::vec3(0.01f);
 
+			// Add a render component
+			RenderComponent::Sptr renderer = monkey2->Add<RenderComponent>();
+			renderer->SetMesh(monkeyMesh);
+			renderer->SetMaterial(boxMaterial);
+
+			// This is an example of attaching a component and setting some parameters
 			RotatingBehaviour::Sptr behaviour = monkey2->Add<RotatingBehaviour>();
 			behaviour->RotationSpeed = glm::vec3(0.0f, 0.0f, -90.0f);
 
@@ -432,21 +411,19 @@ int main() {
 				if (!scene->IsPlaying) {
 					editorSceneState = scene->ToJson();
 				}
+
 				// Toggle state
 				scene->IsPlaying = !scene->IsPlaying;
 
 				// If we've gone from playing to not playing, restore the state from before we started playing
 				if (!scene->IsPlaying) {
+					// We reload to scene from our cached state
 					scene = Scene::FromJson(editorSceneState);
+					// Don't forget to reset the scene's window and wake all the objects!
 					scene->Window = window;
 					scene->Awake();
 				}
 			}
-
-			// If we have the optimized mesh loader enabled, draw some UI for conversions
-			#ifdef OPTIMIZED_OBJ_LOADER
-			DrawMeshConversionGui();
-			#endif
 
 			// Make a new area for the scene saving/loading
 			ImGui::Separator();
@@ -508,35 +485,31 @@ int main() {
 		// Update our worlds physics!
 		scene->DoPhysics(dt);
 
-		// Render all our objects
-		for (int ix = 0; ix < scene->NumObjects(); ix++) {
-			GameObject::Sptr& object = scene->GetObjectByIndex(ix);
-
-			// We now get renderable components from our gameobject, since that was moved
-			// to a component. A better solution would be to keep a list of RenderComponents*
-			// somewhere, where we could then sort based on material info
-			RenderComponent::Sptr renderable = object->Get<RenderComponent>();
-			if (renderable) {
-				// Update the object's transform for rendering
-				object->RecalcTransform();
-
-				// Set vertex shader parameters
-				shader->SetUniformMatrix("u_ModelViewProjection", camera->GetViewProjection() * object->Transform);
-				shader->SetUniformMatrix("u_Model", object->Transform);
-				shader->SetUniformMatrix("u_NormalMatrix", glm::mat3(glm::transpose(glm::inverse(object->Transform))));
-
-				// Apply this object's material
-				renderable->GetMaterial()->Apply();
-
-				// Draw the object
-				renderable->GetMesh()->Draw();
-			}
-
-			// If our debug window is open, then let's draw some info for our objects!
-			if (isDebugWindowOpen) {
-				object->DrawImGui();
-			}
+		// Draw object GUIs
+		if (isDebugWindowOpen) {
+			scene->DrawAllGameObjectGUIs();
 		}
+
+		// Render all our objects
+		ComponentManager::Each<RenderComponent>([&](const RenderComponent::Sptr& renderable) {
+			// Grab the game object so we can do some stuff with it
+			GameObject* object = renderable->GetGameObject();
+
+			// Update the object's transform for rendering
+			object->RecalcTransform();
+
+			// Set vertex shader parameters
+			shader->SetUniformMatrix("u_ModelViewProjection", camera->GetViewProjection() * object->Transform);
+			shader->SetUniformMatrix("u_Model", object->Transform);
+			shader->SetUniformMatrix("u_NormalMatrix", glm::mat3(glm::transpose(glm::inverse(object->Transform))));
+
+			// Apply this object's material
+			renderable->GetMaterial()->Apply();
+
+			// Draw the object
+			renderable->GetMesh()->Draw();
+		});
+
 
 		// End our ImGui window
 		ImGui::End();

@@ -5,10 +5,6 @@
 #include "Gameplay/GameObject.h"
 #include "Gameplay/Light.h"
 
-#include "Graphics/UniformBuffer.h"
-
-const int LIGHT_UBO_BINDING_SLOT = 0;
-
 class RigidBody;
 struct GLFWwindow;
 
@@ -114,6 +110,11 @@ public:
 	void SetupShaderAndLights();
 
 	/// <summary>
+	/// Draws ImGui stuff for all gameobjects in the scene
+	/// </summary>
+	void DrawAllGameObjectGUIs();
+
+	/// <summary>
 	/// Loads a scene from a JSON blob
 	/// </summary>
 	static Scene::Sptr FromJson(const nlohmann::json& data);
@@ -150,9 +151,6 @@ protected:
 	// Resolves contraints (ex: hinge constraints, angle axis, etc...)
 	btConstraintSolver*       _constraintSolver;
 
-	// We store a list of rigid bodies that are active for faster physics iteration
-	std::vector<RigidBody*> _rigidBodies;
-
 	// The path that we've saved or loaded this scene from
 	std::string             _filePath;
 
@@ -166,29 +164,6 @@ protected:
 	std::vector<GameObject::Sptr>  Objects;
 	glm::vec3 _ambientLight;
 	
-	/// <summary>
-	/// Represents a c++ struct layout that matches that of
-	/// our multiple light uniform buffer
-	/// 
-	/// Note that we have to do some weirdness since OpenGl has a
-	/// thing for packing structures to sizeof(vec4)
-	/// </summary>
-	struct LightingUboStruct {
-		struct Light {
-			union {
-				glm::vec3 Position;
-				glm::vec4 Position4;
-			};
-			glm::vec3 Color;
-			float     Attenuation;
-		};
-
-		glm::vec3 AmbientCol;
-		float     NumLights;
-		Light Lights[MAX_LIGHTS];
-	};
-	UniformBuffer<LightingUboStruct>::Sptr _lightingUbo;
-
 	/// <summary>
 	/// Handles configuring our bullet physics stuff
 	/// </summary>

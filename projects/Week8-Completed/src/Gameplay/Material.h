@@ -3,8 +3,8 @@
 #include "Graphics/Texture2D.h"
 #include "Graphics/Shader.h"
 
-// Helper structure for material parameters
-// to our shader
+// Helper structure for material parameters to our shader
+// THIS IS VERY TEMPORARY
 struct Material : public IResource {
 public:
 	typedef std::shared_ptr<Material> Sptr;

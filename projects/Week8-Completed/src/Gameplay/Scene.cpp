@@ -14,15 +14,9 @@ Scene::Scene() :
 	Camera(nullptr),
 	BaseShader(nullptr),
 	_filePath(""),
-	_lightingUbo(nullptr),
 	_ambientLight(glm::vec3(0.1f)),
 	_gravity(glm::vec3(0.0f, 0.0f, -9.81f))
 {
-	_lightingUbo = std::make_shared<UniformBuffer<LightingUboStruct>>();
-	_lightingUbo->GetData().AmbientCol = _ambientLight;
-	_lightingUbo->Update();
-	_lightingUbo->Bind(LIGHT_UBO_BINDING_SLOT);
-
 	_InitPhysics();
 }
 
@@ -56,8 +50,7 @@ GameObject::Sptr Scene::FindObjectByGUID(Guid id) {
 
 void Scene::SetAmbientLight(const glm::vec3& value) {
 	_ambientLight = value;
-	_lightingUbo->GetData().AmbientCol = _ambientLight;
-	_lightingUbo->Update();
+	BaseShader->SetUniform("u_AmbientCol", glm::vec3(0.1f));
 }
 
 const glm::vec3& Scene::GetAmbientLight() const { 
@@ -81,15 +74,15 @@ void Scene::Awake() {
 
 void Scene::DoPhysics(float dt) {
 	if (IsPlaying) {
-		for (auto& rb : _rigidBodies) {
-			rb->PhysicsPreStep(dt);
-		}
+		ComponentManager::Each<RigidBody>([=](const std::shared_ptr<RigidBody>& body) {
+			body->PhysicsPreStep(dt);
+		});
 
 		_physicsWorld->stepSimulation(dt, 10);
 
-		for (auto& rb : _rigidBodies) {
-			rb->PhysicsPostStep(dt);
-		}
+		ComponentManager::Each<RigidBody>([=](const std::shared_ptr<RigidBody>& body) {
+			body->PhysicsPostStep(dt);
+		});
 	}
 }
 
@@ -102,36 +95,23 @@ void Scene::Update(float dt) {
 }
 
 void Scene::SetShaderLight(int index, bool update /*= true*/) {
+	std::stringstream stream;
+	stream << "u_Lights[" << index << "]";
+	std::string name = stream.str();
 
-	// Make sure that the index is within range
-	if (index >= 0 && index < Lights.size() && index < MAX_LIGHTS) {
-		// Get a reference to the light UBO data so we can update it
-		LightingUboStruct& data = _lightingUbo->GetData();
-		Light& light = Lights[index];
-
-		// Copy to the ubo data
-		data.Lights[index].Position = light.Position;
-		data.Lights[index].Color = light.Color;
-		data.Lights[index].Attenuation = 1.0f / (1.0f + light.Range);
-
-		// If requested, send the new data to the UBO
-		if (update)	_lightingUbo->Update();
-	}
+	Light& light = Lights[index];
+	
+	// Set the shader uniforms for the light
+	BaseShader->SetUniform(name + ".Position", light.Position);
+	BaseShader->SetUniform(name + ".Color", light.Color);
+	BaseShader->SetUniform(name + ".Attenuation", 1.0f / (1.0f + light.Range));
 }
 
 void Scene::SetupShaderAndLights() {
-	// Get a reference to the light UBO data so we can update it
-	LightingUboStruct& data = _lightingUbo->GetData();
-	// Send in how many active lights we have and the global lighting settings
-	data.AmbientCol = glm::vec3(0.1f);
-	data.NumLights = Lights.size();
-
-	// Iterate over all lights that are enabled and configure them
-	for (int ix = 0; ix < Lights.size() && ix < MAX_LIGHTS; ix++) {
-		SetShaderLight(ix, false);
+	BaseShader->SetUniform("u_NumLights", (int)Lights.size());
+	for (int ix = 0; ix < Lights.size(); ix++) {
+		SetShaderLight(ix, true);
 	}
-	// Send updated data to OpenGL
-	_lightingUbo->Update();
 }
 
 Scene::Sptr Scene::FromJson(const nlohmann::json& data)
@@ -139,11 +119,13 @@ Scene::Sptr Scene::FromJson(const nlohmann::json& data)
 	Scene::Sptr result = std::make_shared<Scene>();
 	result->BaseShader = ResourceManager::Get<Shader>(Guid(data["default_shader"]));
 
+	// Make sure the scene has objects, then load them all in!
 	LOG_ASSERT(data["objects"].is_array(), "Objects not present in scene!");
 	for (auto& object : data["objects"]) {
 		result->Objects.push_back(GameObject::FromJson(object, result.get()));
 	}
 
+	// Make sure the scene has lights, then load all
 	LOG_ASSERT(data["lights"].is_array(), "Lights not present in scene!");
 	for (auto& light : data["lights"]) {
 		result->Lights.push_back(Light::FromJson(light));
@@ -234,4 +216,11 @@ void Scene::_CleanupPhysics() {
 	delete _broadphaseInterface;
 	delete _collisionDispatcher;
 	delete _collisionConfig;
+}
+
+void Scene::DrawAllGameObjectGUIs()
+{
+	for (auto& object : Objects) {
+		object->DrawImGui();
+	}
 }

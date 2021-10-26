@@ -8,9 +8,9 @@ public:
 	RotatingBehaviour() = default;
 	glm::vec3 RotationSpeed;
 
-	virtual void Update(GameObject* context, float deltaTime) override;
+	virtual void Update(float deltaTime) override;
 
-	virtual void RenderImGui(GameObject* context) override;
+	virtual void RenderImGui() override;
 
 	virtual nlohmann::json ToJson() const override;
 	static RotatingBehaviour::Sptr FromJson(const nlohmann::json& data);

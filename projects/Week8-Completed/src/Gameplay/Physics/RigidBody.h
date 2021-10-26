@@ -4,7 +4,7 @@
 #include <btBulletDynamicsCommon.h>
 
 #include "Gameplay/Components/IComponent.h"
-#include "Gameplay/Physics/Collider.h"
+#include "Gameplay/Physics/ICollider.h"
 
 ENUM(RigidBodyType, int,
 	Unknown   = 0,
@@ -177,8 +177,8 @@ public:
 	virtual void PhysicsPostStep(float dt);
 
 	// Inherited from IComponent
-	virtual void Awake(GameObject* context) override;
-	virtual void RenderImGui(GameObject* context) override;
+	virtual void Awake() override;
+	virtual void RenderImGui() override;
 	virtual nlohmann::json ToJson() const override;
 	static RigidBody::Sptr FromJson(const nlohmann::json& data);
 	MAKE_TYPENAME(RigidBody)
@@ -187,7 +187,6 @@ public:
 protected:
 	friend class PhysicsSystem;
 	Scene*        _scene;
-	GameObject*   _context;
 
 	glm::vec3 _prevScale;
 

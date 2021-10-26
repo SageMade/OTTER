@@ -1,5 +1,5 @@
 #pragma once
-#include "Gameplay/Physics/Collider.h"
+#include "Gameplay/Physics/ICollider.h"
 
 /// <summary>
 /// Represents a plane collider that has an infinately wide plane
