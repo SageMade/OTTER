@@ -2,22 +2,26 @@
 
 #include "Gameplay/Physics/ICollider.h"
 
-class ConvexMeshCollider final : public ICollider {
-public:
-	typedef std::shared_ptr<ConvexMeshCollider> Sptr;
-	static ConvexMeshCollider::Sptr Create();
-	virtual ~ConvexMeshCollider();
+namespace Gameplay::Physics {
+	/// <summary>
+	/// A complex collider type that allows us to construct collision hulls from arbitrary convex meshes
+	/// </summary>
+	class ConvexMeshCollider final : public ICollider {
+	public:
+		typedef std::shared_ptr<ConvexMeshCollider> Sptr;
+		static ConvexMeshCollider::Sptr Create();
+		virtual ~ConvexMeshCollider();
 
-	// Inherited from ICollider
-	virtual void Awake(GameObject* context) override;
-	virtual void DrawImGui() override;
-	virtual void ToJson(nlohmann::json& blob) const override;
-	virtual void FromJson(const nlohmann::json& data) override;
+		// Inherited from ICollider
+		virtual void Awake(GameObject* context) override;
+		virtual void DrawImGui() override;
+		virtual void ToJson(nlohmann::json& blob) const override;
+		virtual void FromJson(const nlohmann::json& data) override;
 
-protected:
-	btTriangleMesh* _triMesh;
-	ConvexMeshCollider();
+	protected:
+		btTriangleMesh* _triMesh;
+		ConvexMeshCollider();
 
-	virtual btCollisionShape* CreateShape() const override;
-
-};
+		virtual btCollisionShape* CreateShape() const override;
+	};
+}

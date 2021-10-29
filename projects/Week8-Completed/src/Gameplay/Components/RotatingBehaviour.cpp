@@ -6,7 +6,7 @@
 #include "Utils/JsonGlmHelpers.h"
 
 void RotatingBehaviour::Update(float deltaTime) {
-	GetGameObject()->Rotation += RotationSpeed * deltaTime;
+	GetGameObject()->SetRotation(GetGameObject()->GetRotationEuler() + RotationSpeed * deltaTime);
 }
 
 void RotatingBehaviour::RenderImGui() {

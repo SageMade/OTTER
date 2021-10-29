@@ -6,6 +6,12 @@ glm::vec4 UNIT_X = glm::vec4(1.0f, 0.0f, 0.0f, 0.0f);
 glm::vec4 UNIT_Y = glm::vec4(0.0f, 1.0f, 0.0f, 0.0f);
 glm::vec4 UNIT_Z = glm::vec4(0.0f, 0.0f, 1.0f, 0.0f);
 glm::vec4 UNIT_W = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
+
+glm::vec3 UNIT_X_3 = glm::vec3(1.0f, 0.0f, 0.0f);
+glm::vec3 UNIT_Y_3 = glm::vec3(0.0f, 1.0f, 0.0f);
+glm::vec3 UNIT_Z_3 = glm::vec3(0.0f, 0.0f, 1.0f);
+glm::vec3 UNIT_W_3 = glm::vec3(0.0f, 0.0f, 0.0f);
+
 glm::vec4 ZERO = glm::vec4(0.0f);
 glm::vec3 ZERO_3 = glm::vec3(0.0f);
 glm::vec2 ZERO_2 = glm::vec2(0.0f);

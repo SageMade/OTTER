@@ -5,48 +5,46 @@
 
 class btPairCachingGhostObject;
 
-class TriggerVolume : public PhysicsBase {
-public:
-	typedef std::function<void(const std::shared_ptr<RigidBody>& obj)> TriggerCallback;
-
-	typedef std::shared_ptr<TriggerVolume> Sptr;
-	virtual ~TriggerVolume();
-	TriggerVolume();
-
+namespace Gameplay::Physics {
 	/// <summary>
-	/// Invoked for each RigidBody before the physics world is stepped forward a frame,
-	/// handles body initialization, shape changes, mass changes, etc...
+	/// A trigger volume defines a shape in 3D space that allows us to respond to rigid bodies
+	/// entering a volume in 3D space. Handles invoking Trigger events on gameobjects
 	/// </summary>
-	/// <param name="dt">The time in seconds since the last frame</param>
-	virtual void PhysicsPreStep(float dt);
-	/// <summary>
-	/// Invoked for each RigidBody after the physics world is stepped forward a frame,
-	/// handles copying transform to the OpenGL state
-	/// </summary>
-	/// <param name="dt">The time in seconds since the last frame</param>
-	virtual void PhysicsPostStep(float dt);
+	class TriggerVolume : public PhysicsBase {
+	public:
+		typedef std::function<void(const std::shared_ptr<RigidBody>& obj)> TriggerCallback;
 
-	void SetEnterCallback(const std::shared_ptr<IComponent>& component, TriggerCallback callback);
-	void RemoveEnterCallback(const std::shared_ptr<IComponent>& component);
+		typedef std::shared_ptr<TriggerVolume> Sptr;
+		virtual ~TriggerVolume();
+		TriggerVolume();
 
-	void SetLeaveCallback(const std::shared_ptr<IComponent>& component, TriggerCallback callback);
-	void RemoveLeaveCallback(const std::shared_ptr<IComponent>& component);
+		/// <summary>
+		/// Invoked for each RigidBody before the physics world is stepped forward a frame,
+		/// handles body initialization, shape changes, mass changes, etc...
+		/// </summary>
+		/// <param name="dt">The time in seconds since the last frame</param>
+		virtual void PhysicsPreStep(float dt) override;
+		/// <summary>
+		/// Invoked for each RigidBody after the physics world is stepped forward a frame,
+		/// handles copying transform to the OpenGL state
+		/// </summary>
+		/// <param name="dt">The time in seconds since the last frame</param>
+		virtual void PhysicsPostStep(float dt) override;
 
-	// Inherited from IComponent
+		// Inherited from IComponent
 
-	virtual void Awake() override;
-	virtual void RenderImGui() override;
-	virtual nlohmann::json ToJson() const override;
-	static TriggerVolume::Sptr FromJson(const nlohmann::json& data);
-	MAKE_TYPENAME(TriggerVolume);
+		virtual void Awake() override;
+		virtual void RenderImGui() override;
+		virtual nlohmann::json ToJson() const override;
+		static TriggerVolume::Sptr FromJson(const nlohmann::json& data);
+		MAKE_TYPENAME(TriggerVolume);
 
-protected:
-	btPairCachingGhostObject*   _ghost;
+	protected:
+		btPairCachingGhostObject*   _ghost;
 
-	std::unordered_map<std::shared_ptr<IComponent>, TriggerCallback> _enterCallbacks;
-	std::unordered_map<std::shared_ptr<IComponent>, TriggerCallback> _exitCallbacks;
-	std::vector<std::weak_ptr<RigidBody>> _currentCollisions;
+		std::vector<std::weak_ptr<RigidBody>> _currentCollisions;
 
-	virtual btBroadphaseProxy* _GetBroadphaseHandle() override;
+		virtual btBroadphaseProxy* _GetBroadphaseHandle() override;
 
-};
+	};
+}

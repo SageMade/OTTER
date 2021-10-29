@@ -7,7 +7,7 @@
 std::map<std::type_index, std::map<Guid, IResource::Sptr>> ResourceManager::_resources;
 std::map<std::string, std::function<Guid(const nlohmann::json&)>> ResourceManager::_typeLoaders;
 
-nlohmann::json ResourceManager::_manifest;
+nlohmann::ordered_json ResourceManager::_manifest;
 
 void ResourceManager::Init() {
 	// TODO: initialize the resource manager once it's a bit more complex
@@ -23,7 +23,7 @@ const nlohmann::json& ResourceManager::GetManifest() {
 
 void ResourceManager::LoadManifest(const std::string& path) {
 	std::string contents = FileHelpers::ReadFile(path);
-	nlohmann::json blob = nlohmann::json::parse(contents);
+	nlohmann::ordered_json blob = nlohmann::ordered_json::parse(contents);
 
 	for (auto& [typeName, items] : blob.items()) {
 		auto& func = _typeLoaders[typeName];
@@ -40,6 +40,7 @@ void ResourceManager::SaveManifest(const std::string& path) {
 	for (auto& [type, map] : _resources) {
 		for (auto& [guid, res] : map) {
 			_manifest[StringTools::SanitizeClassName(type.name())][guid.str()] = res->ToJson();
+			_manifest[StringTools::SanitizeClassName(type.name())][guid.str()]["guid"] = res->GetGUID().str();
 		}
 	}
 	FileHelpers::WriteContentsToFile(path, _manifest.dump(1,'\t'));

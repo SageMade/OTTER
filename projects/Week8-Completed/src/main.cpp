@@ -39,16 +39,17 @@
 #include "Utils/GlmDefines.h"
 
 // Gameplay
-#include "Gameplay/Camera.h"
 #include "Gameplay/Material.h"
-#include "Gameplay/Components/IComponent.h"
 #include "Gameplay/GameObject.h"
 #include "Gameplay/Scene.h"
 
 // Components
+#include "Gameplay/Components/IComponent.h"
+#include "Gameplay/Components/Camera.h"
 #include "Gameplay/Components/RotatingBehaviour.h"
 #include "Gameplay/Components/JumpBehaviour.h"
 #include "Gameplay/Components/RenderComponent.h"
+#include "Gameplay/Components/MaterialSwapBehaviour.h"
 
 // Physics
 #include "Gameplay/Physics/RigidBody.h"
@@ -56,7 +57,9 @@
 #include "Gameplay/Physics/Colliders/PlaneCollider.h"
 #include "Gameplay/Physics/Colliders/SphereCollider.h"
 #include "Gameplay/Physics/Colliders/ConvexMeshCollider.h"
-#include "../../Sandbox/src/Gameplay/Physics/TriggerVolume.h"
+#include "Gameplay/Physics/TriggerVolume.h"
+#include "Graphics/DebugDraw.h"
+#include "Gameplay/Components/TriggerVolumeEnterBehaviour.h"
 
 //#define LOG_GL_NOTIFICATIONS
 
@@ -99,13 +102,19 @@ glm::ivec2 windowSize = glm::ivec2(800, 800);
 // The title of our GLFW window
 std::string windowTitle = "INFR-1350U";
 
+// using namespace should generally be avoided, and if used, make sure it's ONLY in cpp files
+using namespace Gameplay;
+using namespace Gameplay::Physics;
+
 // The scene that we will be rendering
 Scene::Sptr scene = nullptr;
 
 void GlfwWindowResizedCallback(GLFWwindow* window, int width, int height) {
 	glViewport(0, 0, width, height);
 	windowSize = glm::ivec2(width, height);
-	scene->Camera->ResizeWindow(width, height);
+	if (windowSize.x * windowSize.y > 0) {
+		scene->MainCamera->ResizeWindow(width, height);
+	}
 }
 
 /// <summary>
@@ -156,6 +165,9 @@ bool DrawSaveLoadImGui(Scene::Sptr& scene, std::string& path) {
 	// Draw a save button, and save when pressed
 	if (ImGui::Button("Save")) {
 		scene->Save(path);
+
+		std::string newFilename = std::filesystem::path(path).stem().string() + "-manifest.json";
+		ResourceManager::SaveManifest(newFilename);
 	}
 	ImGui::SameLine();
 	// Load scene from file button
@@ -163,6 +175,9 @@ bool DrawSaveLoadImGui(Scene::Sptr& scene, std::string& path) {
 		// Since it's a reference to a ptr, this will
 		// overwrite the existing scene!
 		scene = nullptr;
+
+		std::string newFilename = std::filesystem::path(path).stem().string() + "-manifest.json";
+		ResourceManager::LoadManifest(newFilename);
 		scene = Scene::Load(path);
 
 		return true;
@@ -220,16 +235,19 @@ int main() {
 
 	// Register all our resource types so we can load them from manifest files
 	ResourceManager::RegisterType<Texture2D>();
+	ResourceManager::RegisterType<Shader>();
 	ResourceManager::RegisterType<Material>();
 	ResourceManager::RegisterType<MeshResource>();
-	ResourceManager::RegisterType<Shader>();
 
 	// Register all of our component types so we can load them from files
+	ComponentManager::RegisterType<Camera>();
 	ComponentManager::RegisterType<RenderComponent>();
 	ComponentManager::RegisterType<RigidBody>();
 	ComponentManager::RegisterType<TriggerVolume>();
 	ComponentManager::RegisterType<RotatingBehaviour>();
 	ComponentManager::RegisterType<JumpBehaviour>();
+	ComponentManager::RegisterType<MaterialSwapBehaviour>();
+	ComponentManager::RegisterType<TriggerVolumeEnterBehaviour>();
 
 	// GL states, we'll enable depth testing and backface fulling
 	glEnable(GL_DEPTH_TEST);
@@ -253,7 +271,7 @@ int main() {
 		MeshResource::Sptr monkeyMesh = ResourceManager::CreateAsset<MeshResource>("Monkey.obj");
 		Texture2D::Sptr    boxTexture = ResourceManager::CreateAsset<Texture2D>("textures/box-diffuse.png");
 		Texture2D::Sptr    monkeyTex  = ResourceManager::CreateAsset<Texture2D>("textures/monkey-uvMap.png");  
-		 
+		
 		// Create an empty scene
 		scene = std::make_shared<Scene>();
 
@@ -275,6 +293,7 @@ int main() {
 			monkeyMaterial->MatShader = scene->BaseShader;
 			monkeyMaterial->Texture = monkeyTex;
 			monkeyMaterial->Shininess = 256.0f;
+
 		}
 
 		// Create some lights for our scene
@@ -289,21 +308,28 @@ int main() {
 		scene->Lights[2].Position = glm::vec3(0.0f, 1.0f, 3.0f);
 		scene->Lights[2].Color = glm::vec3(1.0f, 0.2f, 0.1f);
 
-		// Set up the scene's camera
-		scene->Camera = Camera::Create();
-		scene->Camera->SetPosition(glm::vec3(0, 4, 4));
-		scene->Camera->LookAt(glm::vec3(0.0f));
-
 		// We'll create a mesh that is a simple plane that we can resize later
 		MeshResource::Sptr planeMesh = ResourceManager::CreateAsset<MeshResource>();
 		planeMesh->AddParam(MeshBuilderParam::CreatePlane(ZERO, UNIT_Z, UNIT_X, glm::vec2(1.0f)));
 		planeMesh->GenerateMesh();
 
+		// Set up the scene's camera
+		GameObject::Sptr camera = scene->CreateGameObject("Main Camera");
+		{
+			camera->SetPostion(glm::vec3(0, 4, 4));
+			camera->LookAt(glm::vec3(0.0f));
+
+			Camera::Sptr cam = camera->Add<Camera>();
+
+			// Make sure that the camera is set as the scene's main camera!
+			scene->MainCamera = cam;
+		}
+
 		// Set up all our sample objects
 		GameObject::Sptr plane = scene->CreateGameObject("Plane");
 		{
 			// Scale up the plane
-			plane->Scale = glm::vec3(10.0F);
+			plane->SetScale(glm::vec3(10.0F));
 
 			// Create and attach a RenderComponent to the object to draw our mesh
 			RenderComponent::Sptr renderer = plane->Add<RenderComponent>();
@@ -318,9 +344,9 @@ int main() {
 		GameObject::Sptr square = scene->CreateGameObject("Square");
 		{
 			// Set position in the scene
-			square->Position = glm::vec3(0.0f, 0.0f, 2.0f);
+			square->SetPostion(glm::vec3(0.0f, 0.0f, 2.0f));
 			// Scale down the plane
-			square->Scale = glm::vec3(0.5f);
+			square->SetScale(glm::vec3(0.5f));
 
 			// Create and attach a render component
 			RenderComponent::Sptr renderer = square->Add<RenderComponent>();
@@ -334,7 +360,10 @@ int main() {
 		GameObject::Sptr monkey1 = scene->CreateGameObject("Monkey 1");
 		{
 			// Set position in the scene
-			monkey1->Position = glm::vec3(1.5f, 0.0f, 1.0f);
+			monkey1->SetPostion(glm::vec3(1.5f, 0.0f, 1.0f));
+
+			// Add some behaviour that relies on the physics body
+			monkey1->Add<JumpBehaviour>();
 
 			// Create and attach a renderer for the monkey
 			RenderComponent::Sptr renderer = monkey1->Add<RenderComponent>();
@@ -345,15 +374,18 @@ int main() {
 			RigidBody::Sptr physics = monkey1->Add<RigidBody>(RigidBodyType::Dynamic);
 			physics->AddCollider(ConvexMeshCollider::Create());
 
-			// Add some behaviour that relies on the physics body
-			monkey1->Add<JumpBehaviour>();
+
+			// We'll add a behaviour that will interact with our trigger volumes
+			MaterialSwapBehaviour::Sptr triggerInteraction = monkey1->Add<MaterialSwapBehaviour>();
+			triggerInteraction->EnterMaterial = boxMaterial;
+			triggerInteraction->ExitMaterial = monkeyMaterial;
 		}
 
 		GameObject::Sptr monkey2 = scene->CreateGameObject("Complex Object");
 		{
 			// Set and rotation position in the scene
-			monkey2->Position = glm::vec3(-1.5f, 0.0f, 1.0f);
-			monkey2->Rotation.x = 90.0f;
+			monkey2->SetPostion(glm::vec3(-1.5f, 0.0f, 1.0f));
+			monkey2->SetRotation(glm::vec3(90.0f, 0.0f, 0.0f));
 
 			// Add a render component
 			RenderComponent::Sptr renderer = monkey2->Add<RenderComponent>();
@@ -363,23 +395,22 @@ int main() {
 			// This is an example of attaching a component and setting some parameters
 			RotatingBehaviour::Sptr behaviour = monkey2->Add<RotatingBehaviour>();
 			behaviour->RotationSpeed = glm::vec3(0.0f, 0.0f, -90.0f);
-
-			// Kinematic rigid bodies are those controlled by some outside controller
-			// and ONLY collide with dynamic objects
-			RigidBody::Sptr physics = monkey2->Add<RigidBody>(RigidBodyType::Kinematic);
 		}
 
+		// Kinematic rigid bodies are those controlled by some outside controller
+		// and ONLY collide with dynamic objects
+		RigidBody::Sptr physics = monkey2->Add<RigidBody>(RigidBodyType::Kinematic);
+		physics->AddCollider(ConvexMeshCollider::Create());
+
+		// Create a trigger volume for testing how we can detect collisions with objects!
 		GameObject::Sptr trigger = scene->CreateGameObject("Trigger"); 
 		{
 			TriggerVolume::Sptr volume = trigger->Add<TriggerVolume>();
-			volume->AddCollider(BoxCollider::Create(glm::vec3(3.0f)));
+			BoxCollider::Sptr collider = BoxCollider::Create(glm::vec3(3.0f, 3.0f, 1.0f));
+			collider->SetPosition(glm::vec3(0.0f, 0.0f, 0.5f));
+			volume->AddCollider(collider);
 
-			volume->SetEnterCallback(nullptr, [](const std::shared_ptr<PhysicsBase>& body) {
-				LOG_INFO("Entered volume! {}", body->GetGameObject()->Name);
-			});
-			volume->SetLeaveCallback(nullptr, [](const std::shared_ptr<PhysicsBase>& body) {
-				LOG_INFO("Left volume! {}", body->GetGameObject()->Name);
-			});
+			trigger->Add<TriggerVolumeEnterBehaviour>();
 		}
 
 		// Save the asset manifest for all the resources we just loaded
@@ -403,6 +434,10 @@ int main() {
 
 	// Our high-precision timer
 	double lastFrame = glfwGetTime();
+
+
+	BulletDebugMode physicsDebugMode = BulletDebugMode::None;
+	float playbackSpeed = 1.0f;
 
 	nlohmann::json editorSceneState;
 
@@ -432,6 +467,7 @@ int main() {
 
 				// If we've gone from playing to not playing, restore the state from before we started playing
 				if (!scene->IsPlaying) {
+					scene = nullptr;
 					// We reload to scene from our cached state
 					scene = Scene::FromJson(editorSceneState);
 					// Don't forget to reset the scene's window and wake all the objects!
@@ -453,20 +489,18 @@ int main() {
 				scene->Awake();
 			}
 			ImGui::Separator();
+			// Draw a dropdown to select our physics debug draw mode
+			if (BulletDebugDraw::DrawModeGui("Physics Debug Mode:", physicsDebugMode)) {
+				scene->SetPhysicsDebugDrawMode(physicsDebugMode);
+			}
+			LABEL_LEFT(ImGui::SliderFloat, "Playback Speed:    ", &playbackSpeed, 0.0f, 10.0f);
+			ImGui::Separator();
 		}
 
 		// Clear the color and depth buffers
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-		// Grab shorthands to the camera and shader from the scene
-		Shader::Sptr shader = scene->BaseShader;
-		Camera::Sptr camera = scene->Camera;
-
-		// Bind our shader for use
-		shader->Bind();
-
 		// Update our application level uniforms every frame
-		shader->SetUniform("u_CamPos", scene->Camera->GetPosition());
 
 		// Draw some ImGui stuff for the lights
 		if (isDebugWindowOpen) {
@@ -494,8 +528,17 @@ int main() {
 			ImGui::Separator();
 		}
 
+		dt *= playbackSpeed;
+
 		// Perform updates for all components
 		scene->Update(dt);
+
+		// Grab shorthands to the camera and shader from the scene
+		Camera::Sptr camera = scene->MainCamera;
+
+		// Cache the camera's viewprojection
+		glm::mat4 viewProj = camera->GetViewProjection();
+		DebugDrawer::Get().SetViewProjection(viewProj);
 
 		// Update our worlds physics!
 		scene->DoPhysics(dt);
@@ -504,22 +547,37 @@ int main() {
 		if (isDebugWindowOpen) {
 			scene->DrawAllGameObjectGUIs();
 		}
+		
+		// The current material that is bound for rendering
+		Material::Sptr currentMat = nullptr;
+		Shader::Sptr shader = nullptr;
 
 		// Render all our objects
 		ComponentManager::Each<RenderComponent>([&](const RenderComponent::Sptr& renderable) {
+			// Early bail if material or mesh not set
+			if (renderable->GetMaterial() == nullptr |
+				renderable->GetMesh() == nullptr) {
+				return;
+			}
+
+			// If the material has changed, we need to bind the new shader and set up our material and frame data
+			// Note: This is a good reason why we should be sorting the render components in ComponentManager
+			if (renderable->GetMaterial() != currentMat) {
+				currentMat = renderable->GetMaterial();
+				shader = currentMat->MatShader;
+
+				shader->Bind();
+				shader->SetUniform("u_CamPos", scene->MainCamera->GetGameObject()->GetPosition());
+				currentMat->Apply();
+			}
+
 			// Grab the game object so we can do some stuff with it
 			GameObject* object = renderable->GetGameObject();
 
-			// Update the object's transform for rendering
-			object->RecalcTransform();
-
 			// Set vertex shader parameters
-			shader->SetUniformMatrix("u_ModelViewProjection", camera->GetViewProjection() * object->Transform);
-			shader->SetUniformMatrix("u_Model", object->Transform);
-			shader->SetUniformMatrix("u_NormalMatrix", glm::mat3(glm::transpose(glm::inverse(object->Transform))));
-
-			// Apply this object's material
-			renderable->GetMaterial()->Apply();
+			shader->SetUniformMatrix("u_ModelViewProjection", viewProj * object->GetTransform());
+			shader->SetUniformMatrix("u_Model", object->GetTransform());
+			shader->SetUniformMatrix("u_NormalMatrix", glm::mat3(glm::transpose(glm::inverse(object->GetTransform()))));
 
 			// Draw the object
 			renderable->GetMesh()->Draw();

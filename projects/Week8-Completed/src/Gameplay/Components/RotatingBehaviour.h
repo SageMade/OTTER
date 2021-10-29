@@ -1,7 +1,10 @@
 #pragma once
 #include "IComponent.h"
 
-class RotatingBehaviour : public IComponent {
+/// <summary>
+/// Showcases a very simple behaviour that rotates the parent gameobject at a fixed rate over time
+/// </summary>
+class RotatingBehaviour : public Gameplay::IComponent {
 public:
 	typedef std::shared_ptr<RotatingBehaviour> Sptr;
 

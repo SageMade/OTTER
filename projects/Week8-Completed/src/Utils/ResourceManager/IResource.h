@@ -7,6 +7,11 @@
 /// <summary>
 /// Base class for graphics that the resource manager may want to manage
 /// (ex: textures, models, shaders, materials, etc...)
+/// 
+/// NOTE:
+/// Resources must additionally define a static method as such:
+/// static std::shared_ptr<Type> FromJson(const nlohmann::json&);
+/// where Type is the Type of resource
 /// </summary>
 class IResource {
 public:
@@ -24,6 +29,8 @@ public:
 	/// </summary>
 	/// <param name="newValue">The new GUID for the object</param>
 	void OverrideGUID(Guid newValue) { _guid = newValue; }
+
+	virtual void ResolveReferences() {};
 
 	/// <summary>
 	/// Converts this resource into it's JSON manifest format

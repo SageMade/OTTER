@@ -242,8 +242,8 @@ Shader::Sptr Shader::FromJson(const nlohmann::json& data) {
 		// As long as the type is valid
 		if (type != ShaderPartType::Unknown) {
 			// If it has a file, we load from file
-			if (blob.contains("file")) {
-				result->LoadShaderPartFromFile(blob["file"].get<std::string>().c_str(), type);
+			if (blob.contains("path")) {
+				result->LoadShaderPartFromFile(blob["path"].get<std::string>().c_str(), type);
 			}
 			// Otherwise we see if there's a source and load that instead
 			else if (blob.contains("source")) {
@@ -255,3 +255,4 @@ Shader::Sptr Shader::FromJson(const nlohmann::json& data) {
 	result->Link();
 	return result;
 }
+

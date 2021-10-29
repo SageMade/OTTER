@@ -7,6 +7,10 @@ extern glm::vec4 UNIT_X;
 extern glm::vec4 UNIT_Y;
 extern glm::vec4 UNIT_Z;
 extern glm::vec4 UNIT_W;
+extern glm::vec3 UNIT_X_3;
+extern glm::vec3 UNIT_Y_3;
+extern glm::vec3 UNIT_Z_3;
+extern glm::vec3 UNIT_W_3;
 extern glm::vec4 ZERO;
 extern glm::vec3 ZERO_3;
 extern glm::vec2 ZERO_2;
@@ -27,3 +31,8 @@ void NormalizeScaleRef(glm::mat4& transform);
 /// <param name="transform">The GLM transform to copy</param>
 /// <returns>A copy of transform with scaling normalized</returns>
 glm::mat4 NormalizeScale(const glm::mat4& transform);
+
+template <typename T, typename V>
+T Wrap(const T& x, const V& min, const V& max) {
+	return glm::mod((glm::mod((x - min), (max - min)) + (max - min)), (max - min)) + min;
+}

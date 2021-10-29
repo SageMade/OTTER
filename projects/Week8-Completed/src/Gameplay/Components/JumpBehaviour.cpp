@@ -6,7 +6,7 @@
 
 void JumpBehaviour::Awake()
 {
-	_body = GetComponent<RigidBody>();
+	_body = GetComponent<Gameplay::Physics::RigidBody>();
 	if (_body == nullptr) {
 		IsEnabled = false;
 	}
@@ -46,3 +46,4 @@ void JumpBehaviour::Update(float deltaTime) {
 		_isPressed = false;
 	}
 }
+

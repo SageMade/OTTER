@@ -5,11 +5,17 @@
 #include <fstream>
 #include <iostream>
 #include <GLFW/glfw3.h>
+#include <filesystem>
 
 #include "Utils/StringUtils.h"
 
 VertexArrayObject::Sptr ObjLoader::LoadFromFile(const std::string& filename)
 {
+	if (!std::filesystem::exists(filename)) {
+		LOG_WARN("Failed to find OBJ file: \"{}\"", filename);
+		return nullptr;
+	}
+
 	// Open our file in binary mode
 	std::ifstream file;
 	file.open(filename, std::ios::binary);
