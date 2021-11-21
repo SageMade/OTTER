@@ -63,7 +63,7 @@ struct Texture2DDescription {
 		VerticalWrap(WrapMode::Repeat),
 		MinificationFilter(MinFilter::NearestMipLinear),
 		MagnificationFilter(MagFilter::Linear),
-		MaxAnisotropic(1.0f),
+		MaxAnisotropic(-1.0f), // max aniso by default
 		GenerateMipMaps(true),
 		Filename(""),
 		FormatHint(PixelFormat::RGBA)

@@ -9,6 +9,7 @@
 
 // We pre-declare GameObject to avoid circular dependencies in the headers
 class GameObject;
+class TriggerVolume;
 
 /// <summary>
 /// Base class for components that can be attached to game objects
@@ -33,6 +34,9 @@ public:
 	bool IsEnabled;
 
 	virtual ~IComponent();
+
+	virtual void OnTriggerEnter(const std::shared_ptr<TriggerVolume>& trigger) {}
+	virtual void OnTriggerLeave(const std::shared_ptr<TriggerVolume>& trigger) {}
 
 	/// <summary>
 	/// Invoked when a component has been added to a game object, note that this function

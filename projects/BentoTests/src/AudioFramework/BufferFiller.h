@@ -18,8 +18,8 @@ public:
 	BufferFiller& operator=(BufferFiller&& other) = delete;
 
 	/// <summary>
-	/// Create a new instance of a buffer filler that will manage an existing set
-	/// of buffers
+	/// Create a new instance of a buffer filler that will manage an existing set of
+	/// buffers. Note that any existing data in the buffers will be zeroed out
 	/// </summary>
 	/// <param name="dataStores">An array of buffer pointers</param>
 	/// <param name="numBuffers">The numbder of buffers in the array</param>
@@ -32,12 +32,18 @@ public:
 	/// <param name="size">The size of the buffers</param>
 	BufferFiller(uint32_t count, size_t size);
 
-	/// <summary>
-	/// Feeds a stream of planar data into this buffer filler
-	/// </summary>
-	/// <param name="data">An array of buffer pointers</param>
-	/// <param name="length">The length of a single input buffer in bytes</param>
-	/// <param name="onFullCallback">Function to invoke when the buffer has reached capacity</param>
+	/**
+	 * Feeds a stream of planar data into this buffer filler.
+	 * 
+	 * For interleaved data streams, only a single buffer should be used (and only the first buffer set)
+	 * 
+	 * Passing zero for length will immediately invoke the callback and reset the buffer's offset to zero,
+	 * effectively flushing any remaining data stored in the buffer
+	 * 
+	 * @param data The data planes to feed to the buffer filler, must match the number of data planes in this filler
+	 * @param length The length of the data to feed in bytes, each data plane must contain at least this number of bytes
+	 * @param onFullCallback The callback to invoke when the buffer has reached capacity and is about to loop back
+	 */
 	void FeedData(const uint8_t** data, size_t length, std::function<void(uint8_t**, size_t)> onFullCallback);
 	/// <summary>
 	/// Zeroes any remaining elements in the buffers
@@ -74,6 +80,7 @@ protected:
 	uint8_t** buffers;
 	uint32_t bufferCount;
 	size_t   bufferSize;
-	size_t   bufferOffset;
-	bool     ownsBuffer;   // True if this instance has allocated it's own buffers
+	size_t   bufferOffset;  
+	// True if this instance has allocated it's own buffers
+	bool     ownsBuffer; 
 };

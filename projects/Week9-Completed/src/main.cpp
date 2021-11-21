@@ -17,7 +17,7 @@
 #include <GLM/gtc/matrix_transform.hpp>
 #include <GLM/gtc/type_ptr.hpp>
 #define GLM_ENABLE_EXPERIMENTAL
-#include <GLM/gtx/common.hpp> // for fmod (floating modulus)
+#include <GLM/gtx/common.hpp> // for fmod (floating modulus) 
 
 // Graphics
 #include "Graphics/IndexBuffer.h"
@@ -270,16 +270,24 @@ int main() {
 		scene->Awake();
 	} 
 	else {
-		// Create our OpenGL resources
-		Shader::Sptr uboShader = ResourceManager::CreateAsset<Shader>(std::unordered_map<ShaderPartType, std::string>{
-			{ ShaderPartType::Vertex, "shaders/vertex_shader.glsl" }, 
-			{ ShaderPartType::Fragment, "shaders/frag_environment_ambient.glsl" }
+		// This time we'll have 2 different shaders, and share data between both of them using the UBO
+		// This shader will handle reflective materials
+		Shader::Sptr reflectiveShader = ResourceManager::CreateAsset<Shader>(std::unordered_map<ShaderPartType, std::string>{
+			{ ShaderPartType::Vertex, "shaders/vertex_shader.glsl" },  
+			{ ShaderPartType::Fragment, "shaders/frag_environment_reflective.glsl" }  
 		}); 
+
+		// This shader handles our basic materials without reflections (cause they expensive)
+		Shader::Sptr basicShader = ResourceManager::CreateAsset<Shader>(std::unordered_map<ShaderPartType, std::string>{
+			{ ShaderPartType::Vertex, "shaders/vertex_shader.glsl" },
+			{ ShaderPartType::Fragment, "shaders/frag_blinn_phong_textured.glsl" }
+		});
 
 		MeshResource::Sptr monkeyMesh = ResourceManager::CreateAsset<MeshResource>("Monkey.obj");
 		Texture2D::Sptr    boxTexture = ResourceManager::CreateAsset<Texture2D>("textures/box-diffuse.png");
 		Texture2D::Sptr    monkeyTex  = ResourceManager::CreateAsset<Texture2D>("textures/monkey-uvMap.png");  
 
+		// Here we'll load in the cubemap, as well as a special shader to handle drawing the skybox
 		TextureCube::Sptr testCubemap = ResourceManager::CreateAsset<TextureCube>("cubemaps/ocean/ocean.jpg");
 		Shader::Sptr      skyboxShader = ResourceManager::CreateAsset<Shader>(std::unordered_map<ShaderPartType, std::string>{
 			{ ShaderPartType::Vertex, "shaders/skybox_vert.glsl" },
@@ -288,26 +296,28 @@ int main() {
 		 
 		// Create an empty scene
 		scene = std::make_shared<Scene>();
+
+		// Setting up our enviroment map
 		scene->SetSkyboxTexture(testCubemap);
 		scene->SetSkyboxShader(skyboxShader);
+		// Since the skybox I used was for Y-up, we need to rotate it 90 deg around the X-axis to convert it to z-up
 		scene->SetSkyboxRotation(glm::rotate(MAT4_IDENTITY, glm::half_pi<float>(), glm::vec3(1.0f, 0.0f, 0.0f)));
 
-		// I hate this
-		scene->BaseShader = uboShader;
-
 		// Create our materials
+		// This will be our box material, with no environment reflections
 		Material::Sptr boxMaterial = ResourceManager::CreateAsset<Material>();
 		{
 			boxMaterial->Name = "Box";
-			boxMaterial->MatShader = scene->BaseShader; 
+			boxMaterial->MatShader = basicShader; 
 			boxMaterial->Texture = boxTexture;
 			boxMaterial->Shininess = 0.1f;  
 		}	
 		 
+		// This will be the reflective material, we'll make the whole thing 90% reflective
 		Material::Sptr monkeyMaterial = ResourceManager::CreateAsset<Material>();
 		{
 			monkeyMaterial->Name = "Monkey";
-			monkeyMaterial->MatShader = scene->BaseShader;
+			monkeyMaterial->MatShader = reflectiveShader;
 			monkeyMaterial->Texture = monkeyTex; 
 			monkeyMaterial->Shininess = 1.0f;
 
@@ -316,8 +326,8 @@ int main() {
 		// Create some lights for our scene
 		scene->Lights.resize(3);
 		scene->Lights[0].Position = glm::vec3(0.0f, 1.0f, 3.0f);
-		scene->Lights[0].Color = glm::vec3(0.5f, 0.0f, 0.7f);
-		scene->Lights[0].Range = 10.0f;
+		scene->Lights[0].Color = glm::vec3(1.0f, 1.0f, 1.0f);
+		scene->Lights[0].Range = 100.0f;
 
 		scene->Lights[1].Position = glm::vec3(1.0f, 0.0f, 3.0f);
 		scene->Lights[1].Color = glm::vec3(0.2f, 0.8f, 0.1f);
@@ -333,7 +343,7 @@ int main() {
 		// Set up the scene's camera
 		GameObject::Sptr camera = scene->CreateGameObject("Main Camera");
 		{
-			camera->SetPostion(glm::vec3(0, 4, 4));
+			camera->SetPostion(glm::vec3(5.0f));
 			camera->LookAt(glm::vec3(0.0f));
 
 			camera->Add<SimpleCameraControl>();
@@ -348,7 +358,7 @@ int main() {
 		{
 			// Make a big tiled mesh
 			MeshResource::Sptr tiledMesh = ResourceManager::CreateAsset<MeshResource>();
-			tiledMesh->AddParam(MeshBuilderParam::CreatePlane(ZERO, UNIT_Z, UNIT_X, glm::vec2(100.0f), glm::vec3(100.0f)));
+			tiledMesh->AddParam(MeshBuilderParam::CreatePlane(ZERO, UNIT_Z, UNIT_X, glm::vec2(100.0f), glm::vec2(20.0f)));
 			tiledMesh->GenerateMesh();
 
 			// Create and attach a RenderComponent to the object to draw our mesh
@@ -358,7 +368,7 @@ int main() {
 
 			// Attach a plane collider that extends infinitely along the X/Y axis
 			RigidBody::Sptr physics = plane->Add<RigidBody>(/*static by default*/);
-			physics->AddCollider(PlaneCollider::Create());
+			physics->AddCollider(BoxCollider::Create(glm::vec3(50.0f, 50.0f, 1.0f)))->SetPosition({0,0,-1});
 		}
 
 		GameObject::Sptr square = scene->CreateGameObject("Square");
@@ -393,12 +403,6 @@ int main() {
 			// Add a dynamic rigid body to this monkey
 			RigidBody::Sptr physics = monkey1->Add<RigidBody>(RigidBodyType::Dynamic);
 			physics->AddCollider(ConvexMeshCollider::Create());
-
-
-			// We'll add a behaviour that will interact with our trigger volumes
-			MaterialSwapBehaviour::Sptr triggerInteraction = monkey1->Add<MaterialSwapBehaviour>();
-			triggerInteraction->EnterMaterial = boxMaterial;
-			triggerInteraction->ExitMaterial = monkeyMaterial;
 		}
 
 		GameObject::Sptr monkey2 = scene->CreateGameObject("Complex Object");
@@ -574,14 +578,23 @@ int main() {
 		Shader::Sptr shader = nullptr;
 
 		TextureCube::Sptr environment = scene->GetSkyboxTexture();
-		if (environment) environment->Bind(0);
+		if (environment) environment->Bind(0); 
 
 		// Render all our objects
 		ComponentManager::Each<RenderComponent>([&](const RenderComponent::Sptr& renderable) {
-			// Early bail if material or mesh not set
-			if (renderable->GetMaterial() == nullptr |
-				renderable->GetMesh() == nullptr) {
+			// Early bail if mesh not set
+			if (renderable->GetMesh() == nullptr) { 
 				return;
+			}
+
+			// If we don't have a material, try getting the scene's fallback material
+			// If none exists, do not draw anything
+			if (renderable->GetMaterial() == nullptr) {
+				if (scene->DefaultMaterial != nullptr) {
+					renderable->SetMaterial(scene->DefaultMaterial);
+				} else {
+					return;
+				}
 			}
 
 			// If the material has changed, we need to bind the new shader and set up our material and frame data

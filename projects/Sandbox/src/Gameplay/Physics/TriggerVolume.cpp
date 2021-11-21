@@ -150,7 +150,7 @@ void TriggerVolume::Awake() {
 	// Create the ghost object
 	_ghost = new btPairCachingGhostObject();
 	_ghost->setCollisionShape(_shape);
-	_ghost->setUserPointer(SelfRef());
+	_ghost->setUserPointer(&SelfRef());
 	_ghost->setCollisionFlags(_ghost->getCollisionFlags() | btCollisionObject::CF_NO_CONTACT_RESPONSE);
 
 	// Get the transform and send it to the ghost

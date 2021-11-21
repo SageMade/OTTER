@@ -33,6 +33,7 @@ void PhysicsBase::_RenderImGuiBase() {
 	for (int ix = 0; ix < _colliders.size(); ix++) {
 		ICollider::Sptr& collider = _colliders[ix];
 		ImGui::PushID(ix);
+
 		// Draw collider type name and the delete button
 		ImGui::Text((~collider->GetType()).c_str());
 		ImGui::SameLine();
@@ -43,9 +44,11 @@ void PhysicsBase::_RenderImGuiBase() {
 			continue;
 		}
 
+		// We can mark the collider as dirty this way since we have friend access to the class's private members
 		collider->_isDirty |= LABEL_LEFT(ImGui::DragFloat3, "Position", &collider->_position.x, 0.01f);
 		collider->_isDirty |= LABEL_LEFT(ImGui::DragFloat3, "Rotation", &collider->_rotation.x, 1.0f);
 		collider->_isDirty |= LABEL_LEFT(ImGui::DragFloat3, "Scale   ", &collider->_scale.x, 0.01f);
+
 		// Draw collider's editor
 		collider->DrawImGui();
 
@@ -59,7 +62,7 @@ void PhysicsBase::_RenderImGuiBase() {
 		// Since the combo box contains all valid items (and Unknown is 0)
 		// we need to add 1 to the resulting selection index
 		ColliderType type = (ColliderType)(_editorSelectedColliderType + 1);
-		_colliders.push_back(ICollider::Create(type));
+		AddCollider(ICollider::Create(type));
 	}
 	ImGui::Unindent();
 }
@@ -146,12 +149,16 @@ ICollider::Sptr PhysicsBase::AddCollider(const ICollider::Sptr& collider) {
 }
 
 void PhysicsBase::RemoveCollider(const ICollider::Sptr& collider) {
+	// Search for the collider in our list
 	auto& it = std::find(_colliders.begin(), _colliders.end(), collider);
+	// If we found the collider
 	if (it != _colliders.end()) {
+		// Remove the shape if the collider has a shape (should be in our compound shape)
 		if (collider->GetShape() != nullptr) {
 			_shape->removeChildShape(collider->GetShape());
 			_isShapeDirty = true;
 		}
+		// Remove the collider from the list
 		_colliders.erase(it);
 	}
 }
@@ -183,7 +190,10 @@ void PhysicsBase::_AddColliderToShape(ICollider* collider) {
 
 bool PhysicsBase::_HandleShapeDirty() {
 	if (_isShapeDirty) {
+		// Iterate over all the colliders
 		for (auto& collider : _colliders) {
+			// If the collider has changed, we need to remove and re-add it
+
 			if (collider->_isDirty) {
 				// If the collider already had a shape, delete it
 				if (collider->_shape != nullptr) {
@@ -194,10 +204,9 @@ bool PhysicsBase::_HandleShapeDirty() {
 				collider->_isDirty = false;
 			}
 		}
+		return true;
 	}
-	bool result = _isShapeDirty;
-	_isShapeDirty = false;
-	return result;
+	return false;
 }
 
 bool PhysicsBase::_HandleGroupDirty() {

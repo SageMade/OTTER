@@ -14,6 +14,8 @@
 /* Removes the given character from a string */
 #define STRING_REMOVE_CHAR(str, ch) str.erase(std::remove(str.begin(), str.end(), ch), str.end())
 
+#define bt(x) std::underlying_type<x>::type
+
 /* Splits a string into multiple substrings, using the given separator character */
 inline std::vector<std::string> splitString(const std::string& str, char sep = ',') {
 	std::vector<std::string> vecString;
@@ -72,11 +74,11 @@ inline std::vector<std::string> splitString(const std::string& str, char sep = '
     inline T operator*(E enumTmp) { return static_cast<T>(enumTmp); }                                                             \
 	/* Converts an enum into its string name */                                                                                   \
 	inline const std::string& operator~(E enumTmp) { return impl::E##MapName[static_cast<T>(enumTmp)]; }                          \
-	/* Appends an enums name to the end of a string */                                                                           \
+	/* Appends an enums name to the end of a string */                                                                            \
     inline std::string operator+(std::string &&str, E enumTmp) { return str + impl::E##MapName[static_cast<T>(enumTmp)]; }        \
-	/* Appends a string to an enums name, and returns it */                                                                      \
+	/* Appends a string to an enums name, and returns it */                                                                       \
     inline std::string operator+(E enumTmp, std::string &&str) { return impl::E##MapName[static_cast<T>(enumTmp)] + str; }        \
-	/* Appends an enums name to the end of a string */                                                                           \
+	/* Appends an enums name to the end of a string */                                                                            \
     inline std::string &operator+=(std::string &str, E enumTmp) { str += impl::E##MapName[static_cast<T>(enumTmp)]; return str; } \
     /* Advances an enum to it's next possible value */                                                                            \
     inline E operator++(E &enumTmp) {                                                                                             \
@@ -187,4 +189,3 @@ inline std::map<T, std::string> generateEnumMap(std::string strMap)
 	return retMap;
 }
 
-#define bt(x) std::underlying_type<x>::type

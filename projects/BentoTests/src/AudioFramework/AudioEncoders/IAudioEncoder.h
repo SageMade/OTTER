@@ -55,19 +55,18 @@ struct EncoderConfig {
 	uint32_t NumChannels    = 2;
 
 	// Future shit
-	uint8_t  MaxAsyncFrames = 1;
-	bool     AsyncSupport   = false;
+	uint8_t  MaxAsyncFrames = 8;
 };
 
-/// <summary>
-/// Base class for encoders which convert an input stream of data to an encoded format
-/// for later decoding (ex: AAC, FLAC)
-/// </summary>
+/**
+ * Base class for encoders which convert an input stream of data to an encoded format
+ * for later decoding (ex: AAC, FLAC)
+ */
 class IAudioEncoder {
 public:
-	/// <summary>
-	/// Typedef for a function that can handle a resultant frame from an encode
-	/// </summary>
+	/**
+	 * Typedef for an std::function that can handle a resultant frame from an encoder
+	 */
 	typedef std::function<void(EncoderResult*)> SyncDataCallback;
 
 	virtual ~IAudioEncoder() = default;
@@ -77,176 +76,212 @@ public:
 	IAudioEncoder(IAudioEncoder&& other) = delete;
 	IAudioEncoder& operator=(const IAudioEncoder& other) = delete;
 	IAudioEncoder& operator=(IAudioEncoder&& other) = delete;
+	
 
-	/// <summary>
-	/// Gets the Encoding Format that this encoder can output
-	/// </summary>
+	/**
+	 * Returns the encoding format that this encoder outputs
+	 */
 	virtual EncodingFormat GetEncoderFormat() const = 0;
-	/// <summary>
-	/// Returns the input format that this encoding schema requires
-	/// </summary>
+	/**
+	 * Returns the optimal input format for this encoder
+	 */
 	virtual SampleFormat GetInputFormat() const = 0;
+	/**
+	 * Returns true if the encoder has been designed for asynchronous encoding support 
+	 */
+	virtual bool GetAsyncSupported() const = 0;
 
-	/// <summary>
-	/// Sets all basic encoder config settings, overriding existing ones
-	/// Cannot be called after initialization
-	/// </summary>
-	/// <param name="config">The new config to override the existing one with</param>
+
+	/**
+	 * Sets all basic encoder config settings, overriding existing ones
+	 *
+	 * Cannot be called after initialization
+	 *
+	 * @param config The new config to override the existing one with
+	 */
 	virtual void SetConfig(const EncoderConfig& config);
-	/// <summary>
-	/// Returns the current config of the audio encoder
-	/// </summary>
-	virtual const EncoderConfig& GetConfig() const;
+	/**
+	 * Returns the current config of the audio encoder
+	 */
+	virtual const EncoderConfig& GetConfig() const noexcept;
 
-	/// <summary>
-	/// Gets the mutex to lock this audio encoder's input buffer
-	/// </summary>
-	virtual std::mutex& GetInputBufferLock() { return _inputBufferLock; }
+	/**
+	 * Gets the mutex to lock this audio encoder's input buffer
+	 */
+	virtual std::mutex& GetInputBufferLock() noexcept;
 
-	/// <summary>
-	/// Sets the data callback to use for this encoder, this function will receive
-	/// encoded data frames when ready. Note that only a single data callback may
-	/// be bound to an encoder at a time
-	/// </summary>
-	/// <param name="callback">The callback to bind</param>
-	virtual void SetDataCallback(SyncDataCallback callback) { _dataCallback = callback; }
+	/**
+	 * Sets the data callback to use for this encoder
+	 *
+	 * This callback function will receive encoded data frames when they are ready
+	 * for serialization
+	 * 
+	 * Note that only a single data callback may be bound to an encoder at a time
+	 * 
+	 * @param callback The callback to bind
+	 */
+	virtual void SetDataCallback(SyncDataCallback callback) noexcept;
 
-	/// <summary>
-	/// Sets the output bitrate of this encoder
-	/// Cannot be called after initialization
-	/// </summary>
-	/// <param name="bitrate">The bitrate for the encoder to use</param>
-	virtual void SetBitRate(uint32_t bitrate);
-	/// <summary>
-	/// Sets the sampling rate for input to this encoder
-	/// Cannot be called after initialization
-	/// </summary>
-	/// <param name="sampleRate">The sample rate for the encoder to use</param>
+	/**
+	 * Sets the target output bitrate of this encoder
+	 * 
+	 * This function cannot be called after initialization
+	 * 
+	 * @param bitrate The target bitrate for the encoder to use
+     */
+	virtual void SetBitRate(uint32_t bitrate);	
+	/**
+	 * Sets the input sample rate of this encoder
+	 * 
+	 * Note that not all encoders can support all sample rates.
+	 * Prefer 44100hz when available
+	 * 
+	 * This function cannot be called after initialization
+	 * 
+	 * @param sampleRate The sample rate for the encoder to use
+     */
 	virtual void SetSampleRate(uint32_t sampleRate);
-	/// <summary>
-	/// Sets the number of channels that this encoder is handling
-	/// Cannot be called after initialization
-	/// </summary>
-	/// <param name="numChannels">The number of channels for the encoder to use</param>
+	/**	
+	 * Sets the number of channels that this encoder is handling
+	 *
+	 * This function cannot be called after initialization
+	 * 
+	 * @param numChannels The number of channels for the encoder to read/write
+	 */
 	virtual void SetNumChannels(uint8_t numChannels);
-	/// <summary>
-	/// Sets the number of frames for the encoder to allocate for
-	/// asynchronous output handling, only used if AsyncSupported is true
-	/// Cannot be called after initialization
-	/// </summary>
-	/// <param name="numFrames">The output frames for the encoder to allocate</param>
+	/**
+	 * Sets the number of frames for the encoder to allocate for asynchronous output handling
+	 * 
+	 * Note: only used if AsyncSupported is true
+	 * 
+	 * This function cannot be called after initialization
+	 * 
+	 * @param numFrames The number of output frames to allocate
+	 */
 	virtual void SetMaxAsyncFrames(uint8_t numFrames);
-	/// <summary>
-	/// Set whether asynchronous support should be enabled for this encoder, if true,
-	/// a rotary buffer of data frames will be allocated for use by a separate data
-	/// handling thread
-	/// </summary>
-	/// <param name="isSupported">True if async encode/decode is supported, false if not</param>
-	virtual void SetAsyncSupported(bool isSupported);
 
-	/// <summary>
-	/// Gets the bitrate this encoder is configured to handle
-	/// </summary>
-	virtual uint32_t GetBitRate() const;
-	/// <summary>
-	/// Gets the sampling rate this encoder is configured to handle
-	/// </summary>
-	virtual uint32_t GetSampleRate() const;
-	/// <summary>
-	/// Gets the number of channels this encoder is configured to handle
-	/// </summary>
-	virtual uint32_t GetNumChannels() const;
-	/// <summary>
-	/// Gets the number of maximum async frames this encoder is configured to handle
-	/// </summary>
-	virtual uint8_t GetMaxAsyncFrames() const;
-	/// <summary>
-	/// Gets whether this encoder is configured for asynchronous read/write
-	/// </summary>
-	virtual bool GetAsyncSupported() const;
+	/**
+	 * Gets the target bitrate for the encoder
+	 */
+	virtual uint32_t GetBitRate() const noexcept;
+	/**
+	 * Gets the sampling rate this encoder is configured to handle
+	 */
+	virtual uint32_t GetSampleRate() const noexcept;
+	/**
+	 * Gets the number of channels this encoder is configured to handle
+	 */
+	virtual uint32_t GetNumChannels() const noexcept;
+	/**
+	 * Gets the number of output frames that this encoder has allocated
+	 */
+	virtual uint8_t GetMaxAsyncFrames() const noexcept;
 
-	/// <summary>
-	/// Validates configuration and initializes the audio encoder
-	/// </summary>
-	/// <returns>0 on a sucessful init, any other value indicates an error</returns>
+	/** 
+	 * Validates configuration and initializes the audio encoder
+	 * 
+	 * @returns 0 on a successful init, any other value indicates an error
+	 */
 	virtual int Init() = 0;
 
-	/// <summary>
-	/// Returns the underlying input buffer for the given channel.
-	/// Note that for non-planar input formats, all channels will
-	/// point to one interleaved buffer
-	/// 
-	/// This is useful for minimizing use of memcpy
-	/// </summary>
-	/// <param name="channelIx">The index of the channel to select the buffer for</param>
-	/// <returns>The underlying buffer for the channel, or nullptr if channel does not exist</returns>
+	/**
+	 * Returns the underlying input buffer for the given channel.
+	 *
+	 * Note that for non-planar input formats, all channels will
+	 * point to one interleaved buffer
+	 *
+	 * This is useful for minimizing use of memcpy
+	 *
+	 * This function cannot be called before the encoder is initialized
+	 * 
+	 * @param channelIx The index of the channel to select the buffer for
+	 * @returns The underlying buffer for the channel, or nullptr if channel does not exist
+	 */
 	virtual uint8_t* GetInputBuffer(uint8_t channelIx) const = 0;
-	/// <summary>
-	/// Notify the encoder that there is fresh data in the input buffer
-	/// </summary>
-	/// <param name="numSamples">The number of new samples in the buffer</param>
-	/// <returns>The updated number of samples waiting to be encoded</returns>
+	/**
+	 * Notify the encoder that there is fresh data in the input buffer
+	 *
+	 * This function cannot be called before the encoder is initialized
+	 * 
+	 * @param numSamples The number of new samples in the buffer
+	 * returns The updated number of samples waiting to be encoded
+	 */
 	virtual size_t NotifyNewDataInBuffer(size_t numSamples) = 0;
-	/// <summary>
-	/// Returns the number of pending samples in the encoder input queue
-	/// </summary>
+	/**
+	 * Returns the number of pending samples in the encoder input queue
+	 * 
+	 * This value should always be less than GetInputBufferSizeSamples()
+	 *
+	 * This function cannot be called before the encoder is initialized
+	 */
 	virtual size_t GetPendingSampleCount() const = 0;
 
-	/// <summary>
-	/// Returns the size of the input buffers in bytes
-	/// For planar data, this returns the size of each individual buffer
-	/// For interleaved data, this returns the size of the entire buffer
-	/// </summary>
+	/**
+	 * Returns the size of the input buffers in bytes
+	 * 
+	 * For planar data, this returns the size of each individual buffer
+	 * For interleaved data, this returns the size of the entire buffer
+	 *
+	 * This function cannot be called before the encoder is initialized
+	 */
 	virtual size_t GetInputBufferSizeBytes() const = 0;
-	/// <summary>
-	/// Returns the size of the input buffers in samples, returns the
-	/// same value for planar and interleaved buffers
-	/// </summary>
+	/**
+	 * Returns the size of the input buffers in samples
+	 *
+	 * For interleaved data, this will be GetSamplesPerInputFrame() * NumChannels
+	 * For planar data, this will return the same result as GetSamplesPerInputFrame()
+	 *
+	 * This function cannot be called before the encoder is initialized
+	 */
 	virtual size_t GetInputBufferSizeSamples() const = 0;
-	/// <summary>
-	/// Gets the number of samples per input frame, for a single channel
-	/// </summary>
+	/**
+	 * Gets the number of samples per input frame, for a single channel
+	 *
+	 * This function cannot be called before the encoder is initialized
+	 */
 	virtual size_t GetSamplesPerInputFrame() const = 0;
 
-	/// <summary>
-	/// Performs encoding on the input data, in either synchronous or asynchronous mode
-	/// Note that asynchronous mode may result in dropped frames in the event that the
-	/// polling thread cannot keep up with the encoding thread!
-	/// 
-	/// To encode data that has been populated externally, call EncodeFrame(nullptr, 0);
-	/// 
-	/// Data will be returned via the DataCallback
-	/// </summary>
-	/// <param name="data">If not nullptr, this data will be copied to the internal buffer, if null, existing buffer data will be used</param>
-	/// <param name="len">The length of the data to pass to the encoder, in bytes</param>
-	/// <param name="synchronous">True if the encoder should return results immediately, false to queue results into buffer for GetEncodedResults</param>
-	/// <threadsafety instance="true"/>
+	/*
+	 * Feeds input data to the encoder, in either synchronous or asynchronous mode
+	 * 
+	 * Note that asynchronous mode may result in dropped frames in the event that the
+	 * polling thread cannot keep up with the encoding thread!
+	 * 
+	 * To encode data that has been populated externally, call EncodeFrame(nullptr, 0);
+	 * 
+	 * Data will be returned via the DataCallback
+	 *
+	 * This function cannot be called before the encoder is initialized
+	 * 
+	 * @param data        If not nullptr, this data will be copied to the internal buffer, if null, existing buffer data will be used
+	 * @param len         The length of the data to pass to the encoder, in bytes
+	 * @param synchronous True if the encoder should return results immediately, false to queue results into buffer for GetEncodedResults
+	 */
 	virtual void EncodeFrame(const uint8_t** data, size_t len, bool async = false) = 0;
 
-	/// <summary>
-	/// Gets any encoded frames from the output, for use in async mode
-	/// 
-	/// Data will be returned via the DataCallback
-	/// </summary>
-	/// <threadsafety instance="true"/>
+	/**
+	 * Gets any encoded frames from the output, for use in async mode
+	 * 
+	 * Data will be returned via the DataCallback
+	 *
+	 * This function cannot be called before the encoder is initialized
+	 */
 	virtual void GetEncodedResults() = 0;
 
-	/// <summary>
-	/// Flushes any remaining data from this encoder to finish an audio stream
-	/// 
-	/// Data will be returned via the DataCallback in sync mode, or enqued in async mode
-	/// </summary>
-	/// <param name="synchronous">True if the encoder should return results immediately, false to queue results into buffer for GetEncodedResults</param>
+	/**
+	 * Flushes any remaining data from this encoder to finish an audio stream
+	 * 
+	 * Data will be returned via the DataCallback in sync mode, or enqueued in async mode
+	 *
+	 * This function cannot be called before the encoder is initialized
+	 * 
+	 * @param synchronous True if the encoder should return results immediately, false to queue results into buffer for GetEncodedResults
+	 */
 	virtual void Flush(bool async = false) = 0;
 
-
 protected:
-	IAudioEncoder(EncoderConfig config = EncoderConfig()) : 
-		_config(config), 
-		_rawContext(nullptr),
-		_inputBufferLock(std::mutex()),
-		_outputBufferLock(std::mutex()),
-		_dataCallback(nullptr) { };
+	// Protected CTOR
+	IAudioEncoder(EncoderConfig config = EncoderConfig());;
 
 	// The encoder's common configuration parameters
 	EncoderConfig _config;

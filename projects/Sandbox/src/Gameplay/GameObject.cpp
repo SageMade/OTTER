@@ -19,7 +19,7 @@ GameObject::GameObject() :
 	Position(ZERO),
 	Rotation(ZERO),
 	Scale(ONE),
-	Components(std::vector<IComponent::Sptr>()),
+	_components(std::vector<IComponent::Sptr>()),
 	_scene(nullptr)
 { }
 
@@ -33,13 +33,13 @@ Scene* GameObject::GetScene() const {
 }
 
 void GameObject::Awake() {
-	for (auto& component : Components) {
+	for (auto& component : _components) {
 		component->Awake();
 	}
 }
 
 void GameObject::Update(float dt) {
-	for (auto& component : Components) {
+	for (auto& component : _components) {
 		if (component->IsEnabled) {
 			component->Update(dt);
 		}
@@ -56,7 +56,7 @@ void GameObject::DrawImGui(float indent) {
 		ImGui::Separator();
 		ImGui::TextUnformatted("Components");
 		ImGui::Separator();
-		for (auto& component : Components) {
+		for (auto& component : _components) {
 			if (ImGui::CollapsingHeader(component->ComponentTypeName().c_str())) {
 				ImGui::PushID(component.get()); 
 				component->RenderImGui();
@@ -94,7 +94,7 @@ GameObject::Sptr GameObject::FromJson(const nlohmann::json& data, Scene* scene)
 		component->_weakSelfPtr = component;
 
 		// Add component to object and allow it to perform self initialization
-		result->Components.push_back(component);
+		result->_components.push_back(component);
 		component->OnLoad();
 	}
 	return result;
@@ -109,7 +109,7 @@ nlohmann::json GameObject::ToJson() const {
 		{ "scale", GlmToJson(Scale) },
 	};
 	result["components"] = nlohmann::json();
-	for (auto& component : Components) {
+	for (auto& component : _components) {
 		result["components"][component->ComponentTypeName()] = component->ToJson();
 		IComponent::SaveBaseJson(component, result["components"][component->ComponentTypeName()]);
 	}

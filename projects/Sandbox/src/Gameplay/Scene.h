@@ -7,6 +7,7 @@
 #include "Gameplay/Light.h"
 
 #include "Graphics/UniformBuffer.h"
+#include "Physics/BulletDebugDraw.h"
 
 const int LIGHT_UBO_BINDING_SLOT = 0;
 
@@ -156,6 +157,8 @@ protected:
 	// Resolves contraints (ex: hinge constraints, angle axis, etc...)
 	btConstraintSolver*       _constraintSolver;
 	btGhostPairCallback*      _ghostCallback;
+
+	BulletDebugDraw* _debugDraw;
 
 	// The path that we've saved or loaded this scene from
 	std::string             _filePath;

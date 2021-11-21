@@ -1,16 +1,19 @@
 #pragma once
 #include <AudioFramework/IAudioPlatform.h>
 
-class WinAudioPlatform : public IAudioPlatform {
+/**
+ * Extends the IAudioPlatform interface to provide audio capture
+ * capabilities for the Windows platform using Windows Media Foundation
+ */
+class WinAudioPlatform final: public IAudioPlatform {
 public:
 	WinAudioPlatform();
 	virtual ~WinAudioPlatform();
 
 	// Inherited via IAudioPlatform
+
 	virtual void Init() override;
 	virtual void Cleanup() override;
 	virtual IAudioCapDeviceEnumerator* GetDeviceEnumerator() override;
-
-protected:
-	IAudioCapDeviceEnumerator* _audioCapDevices;
+	virtual std::string GetPrefix() override;
 };

@@ -97,7 +97,9 @@ void Scene::DoPhysics(float dt) {
 		ComponentManager::Each<TriggerVolume>([=](const std::shared_ptr<TriggerVolume>& body) {
 			body->PhysicsPostStep(dt);
 		});
+
 	}
+	_physicsWorld->debugDrawWorld();
 }
 
 void Scene::Update(float dt) {
@@ -238,10 +240,14 @@ void Scene::_InitPhysics() {
 		_collisionConfig
 	);
 	_physicsWorld->setGravity(ToBt(_gravity));
+	_debugDraw = new BulletDebugDraw();
+	_physicsWorld->setDebugDrawer(_debugDraw);
+	_debugDraw->setDebugMode(btIDebugDraw::DebugDrawModes::DBG_DrawWireframe);
 	// TODO bullet debug drawing
 }
 
 void Scene::_CleanupPhysics() {
+	delete _debugDraw;
 	delete _physicsWorld;
 	delete _constraintSolver;
 	delete _broadphaseInterface;

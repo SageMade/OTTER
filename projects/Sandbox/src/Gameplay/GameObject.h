@@ -29,8 +29,6 @@ struct GameObject {
 	// The object's world transform
 	glm::mat4               Transform;
 
-	// The components that this game object has attached to it
-	std::vector<IComponent::Sptr> Components;
 
 	// Position of the object
 	glm::vec3 Position;
@@ -67,7 +65,7 @@ struct GameObject {
 	template <typename T, typename = typename std::enable_if<std::is_base_of<IComponent, T>::value>::type>
 	bool Has() {
 		// Iterate over all the pointers in the components list
-		for (const auto& ptr : Components) {
+		for (const auto& ptr : _components) {
 			// If the pointer type matches T, we return true
 			if (std::type_index(typeid(*ptr.get())) == std::type_index(typeid(T))) {
 				return true;
@@ -83,7 +81,7 @@ struct GameObject {
 	template <typename T, typename = typename std::enable_if<std::is_base_of<IComponent, T>::value>::type>
 	std::shared_ptr<T> Get() {
 		// Iterate over all the pointers in the binding list
-		for (const auto& ptr : Components) {
+		for (const auto& ptr : _components) {
 			// If the pointer type matches T, we return that behaviour, making sure to cast it back to the requested type
 			if (std::type_index(typeid(*ptr.get())) == std::type_index(typeid(T))) {
 				return std::dynamic_pointer_cast<T>(ptr);
@@ -109,7 +107,7 @@ struct GameObject {
 		component->_weakSelfPtr = component;
 
 		// Append it to the binding component's storage, and invoke the OnLoad
-		Components.push_back(component);
+		_components.push_back(component);
 		component->OnLoad();
 
 		return component;
@@ -131,6 +129,9 @@ struct GameObject {
 
 private:
 	friend class Scene;
+
+	// The components that this game object has attached to it
+	std::vector<IComponent::Sptr> _components;
 
 	// Pointer to the scene, we use raw pointers since 
 	// this will always be set by the scene on creation

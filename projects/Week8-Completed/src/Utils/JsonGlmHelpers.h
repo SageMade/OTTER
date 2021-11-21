@@ -65,7 +65,7 @@ inline nlohmann::json GlmToJson(const glm::quat& value) {
 
 template <typename T>
 T JsonGet(const nlohmann::json& blob, const std::string& key, const T& defaultRet = T()) {
-	if (blob.find(key) != blob.end()) {
+	if (blob.contains(key)) {
 		return blob[key].get<T>();
 	} else {
 		return defaultRet;

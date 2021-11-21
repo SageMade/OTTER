@@ -59,6 +59,7 @@
 #include "Gameplay/Physics/Colliders/ConvexMeshCollider.h"
 #include "Utils/OptimizedObjLoader.h"
 #include "Gameplay/Physics/TriggerVolume.h"
+#include "Graphics/DebugDraw.h"
 
 //#define LOG_GL_NOTIFICATIONS
 
@@ -344,7 +345,7 @@ int main() {
 			RigidBody::Sptr physics = plane->Add<RigidBody>(/*static by default*/);
 			physics->AddCollider(PlaneCollider::Create());
 		}
-
+		/*
 		GameObject::Sptr square = scene->CreateGameObject("Square");
 		{
 			MeshResource::Sptr meshRes = ResourceManager::CreateAsset<MeshResource>();
@@ -400,6 +401,24 @@ int main() {
 			volume->SetLeaveCallback(nullptr, [](const std::shared_ptr<PhysicsBase>& body) {
 				LOG_INFO("Left volume! {}", body->GetGameObject()->Name);
 			});
+		}
+		*/
+		{
+			glm::vec3 pos = glm::vec3(-4.0f, 0.0f, 1.0f);
+			ColliderType type = ColliderType::Plane;
+			while (IsValidColliderType((int)type) && type != ColliderType::Unknown) {
+				GameObject::Sptr box = scene->CreateGameObject(~type);
+				box->Position = pos;
+				RenderComponent::Sptr render = box->Add<RenderComponent>();
+				render->SetMaterial(monkeyMaterial);
+				render->SetMesh(monkeyMesh);
+				render->IsEnabled = false;
+				try {
+					box->Add<RigidBody>(RigidBodyType::Kinematic)->AddCollider(ICollider::Create(type));
+				} catch(std::exception& e) {}
+				pos.x += 2.0f;
+				type++;
+			}
 		}
 
 		// Save the asset manifest for all the resources we just loaded
@@ -519,8 +538,11 @@ int main() {
 		// Perform updates for all components
 		scene->Update(dt);
 
+		DebugDrawer::Get().SetViewProjection(camera->GetViewProjection());
 		// Update our worlds physics!
 		scene->DoPhysics(dt);
+		DebugDrawer::Get().FlushAll();
+		shader->Bind();
 
 		// Render all our objects
 		for (int ix = 0; ix < scene->NumObjects(); ix++) {
@@ -530,7 +552,7 @@ int main() {
 			// to a component. A better solution would be to keep a list of RenderComponents*
 			// somewhere, where we could then sort based on material info
 			RenderComponent::Sptr renderable = object->Get<RenderComponent>();
-			if (renderable) {
+			if (renderable && renderable->IsEnabled) {
 				// Update the object's transform for rendering
 				object->RecalcTransform();
 

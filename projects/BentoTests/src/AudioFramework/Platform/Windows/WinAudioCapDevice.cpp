@@ -40,14 +40,28 @@ inline GUID ToMfFormat(SampleFormat format) {
 }
 
 WinAudioCapDevice::WinAudioCapDevice(IMFActivate* wmfDevice) : IAudioCapDevice(),
-_attributes(wmfDevice), _device(nullptr), _reader(nullptr), _mediaType(nullptr)
+_attributes(nullptr), _device(nullptr), _reader(nullptr), _mediaType(nullptr)
 {
-	IMFMediaType* audioFormat = nullptr;
-	WAVEFORMATEXTENSIBLE* waveFormatEX = nullptr; // The extended wave format for the recording device
-	// Extract wide name from Windows
+	// Since we want to keep devices alive after enumerator is killed, we need to get our device 
+	// pointer again in here, because Windows is dumb
+	UINT numDevs = 0;
+	MFEnumDeviceSources(wmfDevice, &_devicesPtr, &numDevs);
+	if (numDevs != 1) {
+		throw std::runtime_error("Windows device enumeration failed to distinguish audio devices");
+	}
+
+	// Store device attributes
+	_attributes = _devicesPtr[0];
+
+	// Extract wide name from Windows, since apparently everything is wide characters nows
 	LPWSTR name;
 	uint32_t size;
 	_attributes->GetAllocatedString(MF_DEVSOURCE_ATTRIBUTE_FRIENDLY_NAME, &name, &size);
+
+	// Make sure we got the string
+	if (name == nullptr) {
+		throw std::runtime_error("Failed to retrieve audio device name!");
+	}
 
 	// Name from pointer, convert from wide to short chars
 	std::wstring wideName = name;
@@ -63,6 +77,7 @@ _attributes(wmfDevice), _device(nullptr), _reader(nullptr), _mediaType(nullptr)
 	MFCreateSourceReaderFromMediaSource(_device, _attributes, &_reader);
 
 	// Get the native media type of the stream
+	IMFMediaType* audioFormat = nullptr;
 	_reader->GetNativeMediaType(MF_SOURCE_READER_FIRST_AUDIO_STREAM, MF_SOURCE_READER_CURRENT_TYPE_INDEX, &audioFormat);
 
 	// Get the media representation so we can pull out it's configuration
@@ -71,6 +86,7 @@ _attributes(wmfDevice), _device(nullptr), _reader(nullptr), _mediaType(nullptr)
 	AM_MEDIA_TYPE* format = reinterpret_cast<AM_MEDIA_TYPE*>(rawRepresentation);
 
 	// Ensure base format is something we understand
+	WAVEFORMATEXTENSIBLE* waveFormatEX = nullptr;
 	if (format->formattype == FORMAT_WaveFormatEx) {
 		waveFormatEX = reinterpret_cast<WAVEFORMATEXTENSIBLE*>(format->pbFormat);
 	} else {
@@ -84,17 +100,24 @@ _attributes(wmfDevice), _device(nullptr), _reader(nullptr), _mediaType(nullptr)
 }
 
 WinAudioCapDevice::~WinAudioCapDevice() {
-	// Release reader and device so we don't waste memory
-	if (_reader != nullptr) _reader->Release();
-	if (_device != nullptr) _device->Release();
-	if (_attributes != nullptr) _attributes->Release();
-	if (_mediaType != nullptr) _mediaType->Release();
+	// Flush the reader stream
+	_reader->Flush(MF_SOURCE_READER_FIRST_AUDIO_STREAM);
 
-	// Null out reader and device so we don't accidentally attempt to use them
-	_reader = nullptr;
-	_device = nullptr;
+	// Release the pointer to devices
+	CoTaskMemFree(_devicesPtr);
+
+	// Release everything else we may or may not currently have allocated
+	if (_reader     != nullptr) _reader->Release();
+	if (_device     != nullptr) _device->Release();
+	if (_attributes != nullptr) _attributes->Release();
+	if (_mediaType  != nullptr) _mediaType->Release();
+
+	// Null everything out
+	_devicesPtr = nullptr;
+	_reader     = nullptr;
+	_device     = nullptr;
 	_attributes = nullptr;
-	_mediaType = nullptr;
+	_mediaType  = nullptr;
 }
 
 void WinAudioCapDevice::Init(const AudioInStreamConfig* targetConfig) {
@@ -159,5 +182,9 @@ void WinAudioCapDevice::Stop() {
 	// Null out reader and device so we don't accidentally attempt to use them
 	_reader = nullptr;
 	_mediaType = nullptr;
+}
+
+IAudioCapDevice* WinAudioCapDevice::Clone() const {
+	return new WinAudioCapDevice(_attributes);
 }
 

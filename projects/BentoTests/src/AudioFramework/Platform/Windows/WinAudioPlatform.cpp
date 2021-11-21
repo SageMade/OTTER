@@ -17,8 +17,13 @@ void WinAudioPlatform::Init() {
 
 void WinAudioPlatform::Cleanup() {
 	MFShutdown();
+	LOG_INFO("Cleaning up Windows Media Foundation audio subsystem");
 }
 
 IAudioCapDeviceEnumerator* WinAudioPlatform::GetDeviceEnumerator() {
 	return new WinAudioCapDeviceEnumerator();
+}
+
+std::string WinAudioPlatform::GetPrefix() {
+	return "WIN";
 }

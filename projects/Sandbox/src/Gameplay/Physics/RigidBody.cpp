@@ -182,7 +182,7 @@ void RigidBody::Awake() {
 	// Create the bullet rigidbody and add it to the physics scene
 	_body = new btRigidBody(_mass, _motionState, _shape, _inertia);
 	// Add a pointer to our own weak reference to allow getting this component as a shared_ptr later
-	_body->setUserPointer(SelfRef());
+	_body->setUserPointer(&SelfRef());
 
 	_scene->GetPhysicsWorld()->addRigidBody(_body);
 

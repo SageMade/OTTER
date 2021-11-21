@@ -1,7 +1,7 @@
 #include "Graphics/TextureCube.h"
 #include <filesystem>
 #include "stb_image.h"
-#include "../../Week8-Completed/src/Utils/JsonGlmHelpers.h"
+#include "Utils/JsonGlmHelpers.h"
 
 TextureCube::TextureCube(const std::string& baseFilename) :
 	ITexture(TextureType::Cubemap),
@@ -100,11 +100,15 @@ void TextureCube::_LoadFromDescription()
 
 void TextureCube::_LoadImages(const std::unordered_map<CubeMapFace, std::string>& faceFilenames)
 {
+	// Will store all of our texture data, back to back in memory
 	uint8_t* datastore = nullptr;
-
+	// The size of a single face's texture, in bytes
 	size_t textureDataSize = 0;
 
+	// The number of channels that we're expecting
 	int numChannels = 0;
+
+	// Load all 6 faces
 	for (int ix = 0; ix < 6; ix++) {
 		CubeMapFace face = (CubeMapFace)ix;
 		
@@ -121,17 +125,24 @@ void TextureCube::_LoadImages(const std::unordered_map<CubeMapFace, std::string>
 			LOG_ERROR("STBI Failed to load image from \"{}\"", filename);
 			return;
 		}
+		// If the texture is not square, warn and abort
 		if (fileWidth != fileHeight) {
 			if (data != nullptr) { delete[] datastore; }
 			LOG_ERROR("Image loaded from \"{}\" was not square", filename);
 			stbi_image_free(data);
 			return;
 		}
+		// If the dataStore is empty, this is the first texture we loaded
 		if (datastore == nullptr) {
+			// Store the size and number of channels
 			_description.Size = fileWidth;
 			numChannels = fileNumChannels;
+
+			// Get the format and pixel format for the number of channels
 			_description.Format = GetInternalFormatForChannels8(numChannels);
 			_description.FormatHint = GetPixelFormatForChannels(numChannels);
+
+			// Determine how many bytes we'll need to store a single face worth of data
 			textureDataSize = ((size_t)_description.Size * _description.Size * GetTexelSize(_description.FormatHint, PixelType::Byte));
 
 			// This is one of those poorly documented things in OpenGL
@@ -139,22 +150,27 @@ void TextureCube::_LoadImages(const std::unordered_map<CubeMapFace, std::string>
 				LOG_WARN("The alignment of a horizontal line is not a multiple of 4, this will require a call to glPixelStorei(GL_PACK_ALIGNMENT)");
 			}
 
+			// Allocate the data store for our image data
 			datastore = new uint8_t[textureDataSize * 6];
-		} else if (fileWidth != _description.Size || fileNumChannels != numChannels) {
+		}
+		// If this is NOT the first image, and it does not match previous images, abort
+		else if (fileWidth != _description.Size || fileNumChannels != numChannels) {
 			delete[] datastore;
 			LOG_WARN("Image \"{}\" did not match size or format of texture cube", filename);
 			stbi_image_free(data);
 			return;
 		}
 
+		// Copy the data we loaded into the corresponding location in the data store
 		memcpy(datastore + textureDataSize * ix, data, textureDataSize);
 		stbi_image_free(data);
 	}
 
+	// Allocate memory and set up initial parameters
 	_SetTextureParams();
 
-	int componentSize = (GLint)GetTexelComponentSize(PixelType::Byte);
-	glPixelStorei(GL_PACK_ALIGNMENT, componentSize);
+	// Set our pixel alignment to a single byte so we don't get banding
+	glPixelStorei(GL_PACK_ALIGNMENT, 1);
 
 	// Upload our data to our image (note that the custom enum tools let us convert to base type [GLenum] with the * operator)
 	glTextureSubImage3D(_handle, 0, 0, 0, 0, _description.Size, _description.Size, 6, *_description.FormatHint, *PixelType::UByte, datastore);
@@ -167,6 +183,7 @@ void TextureCube::_SetTextureParams(){
 		// Allocates the memory for our texture
 		glTextureStorage2D(_handle, 1, (GLenum)_description.Format, _description.Size, _description.Size);
 
+		// Set up our texture parameters
 		glTextureParameteri(_handle, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 		glTextureParameteri(_handle, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 		glTextureParameteri(_handle, GL_TEXTURE_MIN_FILTER, (GLenum)_description.MinificationFilter);

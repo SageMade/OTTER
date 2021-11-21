@@ -514,6 +514,7 @@ bool DrawSaveLoadImGui(Scene::Sptr& scene, std::string& path) {
 	ImGui::SameLine();
 	// Load scene from file button
 	if (ImGui::Button("Load")) {
+		ResourceManager::LoadManifest("manifest.json");
 		// Since it's a reference to a ptr, this will
 		// overwrite the existing scene!
 		scene = Scene::Load(path);
@@ -579,7 +580,7 @@ int main() {
 	// The scene that we will be rendering
 	Scene::Sptr scene = nullptr;
 
-	bool loadScene = false;
+	bool loadScene = true;
 	// For now we can use a toggle to generate our scene vs load from file
 	if (loadScene) {
 		ResourceManager::LoadManifest("manifest.json");
@@ -714,7 +715,7 @@ int main() {
 		}
 
 		// Rotate our models around the z axis at 90 deg per second
-		if (isRotating) {
+		if (isRotating && monkey1 != nullptr && monkey2 != nullptr) {
 			monkey1->Rotation += glm::vec3(0.0f, 0.0f, dt * 90.0f);
 			monkey2->Rotation -= glm::vec3(0.0f, 0.0f, dt * 90.0f); 
 		}

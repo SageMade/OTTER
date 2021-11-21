@@ -2,7 +2,9 @@
 #include <queue>
 #include <aacenc_lib.h>
 #include <Logging.h>
-#include <AudioFramework/BufferFiller.h>
+
+#include "AudioFramework/BufferFiller.h"
+#include "FDK_audio.h" // for TRANSPORT_TYPE
 
 /// <summary>
 /// Gets an error string for a given AACENC_Error
@@ -51,13 +53,13 @@ inline CHANNEL_MODE MapChannelMode(int numChannels) {
 #define AACENC_CALL(x) {AACENC_ERROR err = (x); if (err != AACENC_OK && err != AACENC_ENCODE_EOF) { throw std::runtime_error(GetErrorString(err)); }}
 #define AACENC_CHECK(x) {if (x != AACENC_OK && x != AACENC_ENCODE_EOF) { throw std::runtime_error(GetErrorString(err)); }}
 
+// This constant is derived from the FDK documentation for recommended output buffer size
 #define BUFF_SIZE_PER_CHANNEL 6144u
-#define ANCILLARY_BUFF_SIZE 50u
 
 /// <summary>
 /// The state parameters for the encoder once it has been initialized
 /// </summary>
-struct AacEncoderContext {
+struct AacEncoder::AacEncoderContext {
 	// The FDK encoder pointer
 	AACENCODER*     Encoder; 
 	
@@ -119,7 +121,11 @@ struct AacEncoderContext {
 	uint32_t        CurrentOutputTarget = 0;
 };
 
-AacEncoder::AacEncoder() : IAudioEncoder(), _context(nullptr), _aacConfig(AacConfig()) {
+AacEncoder::AacEncoder() : 
+	IAudioEncoder(), 
+	_context(nullptr), 
+	_aacConfig(AacConfig()) 
+{
 	_aacConfig.TransportType       = AacTransportType::ADTS;
 	_aacConfig.UseAfterburner      = false;
 	_aacConfig.IsCrcEnabled        = false;
@@ -145,12 +151,16 @@ AacEncoder::~AacEncoder() {
 	}
 }
 
-EncodingFormat AacEncoder::GetEncoderFormat() const { 
+EncodingFormat AacEncoder::GetEncoderFormat() const noexcept   { 
 	return EncodingFormat::AAC; 
 }
 
-SampleFormat AacEncoder::GetInputFormat() const { 
+SampleFormat AacEncoder::GetInputFormat() const noexcept  { 
 	return SampleFormat::PCM; 
+}
+
+bool AacEncoder::GetAsyncSupported() const noexcept {
+	return false;
 }
 
 void AacEncoder::SetAfterburnerEnabled(bool isEnabled) {
@@ -224,6 +234,8 @@ int AacEncoder::Init() {
 
 	// Set up the input and output buffer descriptors
 	_ConfigureInOutBuffers();
+
+	return 0;
 }
 
 uint8_t* AacEncoder::GetInputBuffer(uint8_t channelIx) const {
@@ -259,9 +271,11 @@ void AacEncoder::EncodeFrame(const uint8_t** data, size_t numBytes, bool async /
 	_context->InputFiller->FeedData(data, numBytes, [&](uint8_t** dataPlanes, size_t buffSize) {
 		// Input arguments to encoder
 		AACENC_InArgs inArgs = AACENC_InArgs();
+		
 		// Pass entire frames worth every time
 		inArgs.numInSamples = _context->InputFiller->Size() / sizeof(INT_PCM);
 		inArgs.numAncBytes = 0;
+
 		// Output arguments to encoder
 		AACENC_OutArgs outArgs = AACENC_OutArgs();
 		memset(&outArgs, 0, sizeof(AACENC_OutArgs));
@@ -269,33 +283,33 @@ void AacEncoder::EncodeFrame(const uint8_t** data, size_t numBytes, bool async /
 		// Keep track of encoder state
 		AACENC_ERROR err = AACENC_ERROR::AACENC_OK;
 
+		// Enter critical section for output buffer
+		_outputBufferLock.lock();
 		do {
-			// Enter critical section
+			// Enter critical section for input buffer
 			_inputBufferLock.lock();
-			_outputBufferLock.lock();
+
 			// Encode the frame
 			err = aacEncEncode(_context->Encoder, &_context->InputBufferDesc, &_context->OutputBufferDesc, &inArgs, &outArgs);
+
 			// Shift input data depending on how many samples the encoder has processed
 			memmove(_context->InputBuffer, _context->InputBuffer + outArgs.numInSamples, sizeof(INT_PCM) * (inArgs.numInSamples - outArgs.numInSamples));
 			inArgs.numInSamples -= outArgs.numInSamples;
+
 			// exit critical section for input buffer
 			_inputBufferLock.unlock();
 
-			// Track our total # of samples encoded, we can use this to skip ofer the encoder delay
+			// Track our total # of samples encoded, we can use this to skip over the encoder delay
 			_context->TotalSamplesEncoded += outArgs.numInSamples;
 
-			if (_context->TotalSamplesEncoded > _context->EncoderInfo.nDelay && outArgs.numOutBytes > 0) {
-				EncoderResult* result = &_context->OutputResult;
-				result->Data = _context->OutputBuffer;
-				result->DataSize = outArgs.numOutBytes;
-				result->Duration = outArgs.numInSamples / _config.NumChannels;
-				if (_dataCallback != nullptr) {
-					_dataCallback(result);
-				}
-			}
-			// exit critical section for output buffer
-			_outputBufferLock.unlock();
-		} while (err == AACENC_ERROR::AACENC_OK && outArgs.numOutBytes > 0);
+			_HandleOutputDataFrame(async, outArgs.numInSamples, outArgs.numOutBytes);
+
+		}
+		// Run the encoder as long as it is spitting out data frames
+		while (err == AACENC_ERROR::AACENC_OK && outArgs.numOutBytes > 0);
+
+		// exit critical section for output buffer
+		_outputBufferLock.unlock();
 	});
 	_context->PendingSamples = _context->InputFiller->InternalBufferOffset();
 }
@@ -307,34 +321,33 @@ void AacEncoder::GetEncodedResults() {
 
 void AacEncoder::Flush(bool async /*= false*/) {
 	LOG_ASSERT(_context != nullptr, "This encoder has not been initialized!");
+
+	// Flush the input buffer and encode all frames
 	_context->InputFiller->Flush();
 	EncodeFrame(nullptr, 0);
 
 	AACENC_InArgs inArgs;
 	inArgs.numInSamples = -1;
 	inArgs.numAncBytes = 0;
+
 	AACENC_OutArgs outArgs;
 	outArgs.numOutBytes = 0;
 
 	AACENC_ERROR err = AACENC_ERROR::AACENC_OK;
+
+	// Enter output buffer critical section
+	_outputBufferLock.lock();
 	do {
 		_inputBufferLock.lock();
-		_outputBufferLock.lock();
 		err = aacEncEncode(_context->Encoder, &_context->InputBufferDesc, &_context->OutputBufferDesc, &inArgs, &outArgs);
 		_inputBufferLock.unlock();
 
-		if (outArgs.numOutBytes > 0) {
-			EncoderResult* result = &_context->OutputResult;
-			result->Data = _context->OutputBuffer;
-			result->DataSize = outArgs.numOutBytes;
-			result->Duration = outArgs.numInSamples / _config.NumChannels;
-			if (_dataCallback != nullptr) {
-				_dataCallback(result);
-			}
-		}
-		_outputBufferLock.unlock();
+		_HandleOutputDataFrame(async, outArgs.numInSamples, outArgs.numOutBytes);
+
 	} while (err == AACENC_ERROR::AACENC_OK && outArgs.numOutBytes > 0);
 
+	// exit output buffer critical section
+	_outputBufferLock.unlock();
 }
 
 void AacEncoder::_ConfigureInOutBuffers() {
@@ -348,11 +361,11 @@ void AacEncoder::_ConfigureInOutBuffers() {
 	_context->OutputBuffer = new uint8_t[_context->OutputBufferSizeBytes];
 
 	// Determine how many output buffers to allocate based on async settings
-	_context->NumOutputBuffers = _config.AsyncSupport ? _config.MaxAsyncFrames : 0;
+	_context->NumOutputBuffers = GetAsyncSupported() ? _config.MaxAsyncFrames : 0;
 
 	// If we support async decoding, we need a few extra output frames. Note an optimization would be to actually pool these in one big 'ol 
 	// memory pool
-	if (_config.AsyncSupport && _config.MaxAsyncFrames > 0) {
+	if (GetAsyncSupported() && _config.MaxAsyncFrames > 0) {
 		_context->AsyncResultPool = new EncoderResult[_config.MaxAsyncFrames];
 		_context->AsyncOutputBuffer = new uint8_t[(size_t)_context->EncoderInfo.maxOutBufBytes * _config.MaxAsyncFrames];
 		for (int ix = 1; ix < _context->NumOutputBuffers; ix++) {
@@ -391,4 +404,24 @@ void AacEncoder::_ConfigureInOutBuffers() {
 		reinterpret_cast<uint8_t*>(_context->InputBuffer)
 	};
 	_context->InputFiller = new BufferFiller(buffs, 1, _context->InputBufferSizeBytes);
+}
+
+void AacEncoder::_HandleOutputDataFrame(bool async, int numInSamples, int numOutBytes) {
+	// If we have data and have passed the encoder startup delay
+	if (_context->TotalSamplesEncoded > _context->EncoderInfo.nDelay && numOutBytes > 0) {
+		if (async) {
+			LOG_ASSERT(false, "Not implemented!");
+		} else {
+			// Get a result, load it full of the output data
+			EncoderResult* result = &_context->OutputResult;
+			result->Data = _context->OutputBuffer;
+			result->DataSize = numOutBytes;
+			result->Duration = numInSamples / _config.NumChannels;
+
+			// invoke callback on same thread with data
+			if (_dataCallback != nullptr) {
+				_dataCallback(result);
+			}
+		}
+	}
 }

@@ -1,10 +1,11 @@
 #include "BufferFiller.h"
+#include <stdexcept>
 #include <GLM/glm.hpp>
 
 BufferFiller::BufferFiller(uint8_t** dataStores, uint32_t numBuffers, size_t size)
 	: buffers(nullptr), bufferCount(numBuffers), bufferSize(size), bufferOffset(0), ownsBuffer(false)
 {
-	buffers = new uint8_t*[bufferSize];
+	buffers = new uint8_t*[bufferCount];
 	for(int ix = 0; ix < bufferCount; ix++) {
 		buffers[ix] = dataStores[ix];
 		memset(buffers[ix], 0, bufferSize);
@@ -13,10 +14,13 @@ BufferFiller::BufferFiller(uint8_t** dataStores, uint32_t numBuffers, size_t siz
 
 BufferFiller::BufferFiller(uint32_t count, size_t size)
 	: buffers(nullptr), bufferSize(size), bufferOffset(0), ownsBuffer(true), bufferCount(count) {
-	buffers = new uint8_t*[bufferSize];
+	buffers = new uint8_t*[bufferCount];
+	// Iterate over buffers, allocate and zero memory
 	for (int ix = 0; ix < bufferCount; ix++) {
-		buffers[ix] = reinterpret_cast<uint8_t*>(malloc(bufferSize));
-		memset(buffers[ix], 0, bufferSize);
+		buffers[ix] = reinterpret_cast<uint8_t*>(calloc(1, bufferSize));
+		if (buffers[ix] == nullptr) {
+			throw std::runtime_error("Failed to allocate space on heap for buffer!");
+		}
 	}
 }
 
@@ -31,7 +35,9 @@ BufferFiller::~BufferFiller() {
 
 void BufferFiller::FeedData(const uint8_t** data, size_t length, std::function<void(uint8_t**, size_t)> onFullCallback) {
 	if (length == 0) {
-		onFullCallback(buffers, bufferSize - bufferOffset);
+		onFullCallback(buffers, bufferOffset);
+		bufferOffset = 0;
+		return;
 	}
 
 	// We use remaining and an offset so we don't have to spend the time going back and forth
@@ -82,5 +88,5 @@ void BufferFiller::Flush() {
 	for (int ix = 0; ix < bufferCount; ix++) {
 		memset(buffers[ix] + bufferOffset, 0, bufferSize - bufferOffset);
 	}
-	bufferOffset = 0;
+	bufferOffset = bufferSize;
 }

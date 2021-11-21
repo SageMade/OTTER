@@ -1,7 +1,7 @@
 #pragma once
 #include "Gameplay/Physics/ICollider.h"
 
-class CylinderCollider final : public ICollider {
+class CylinderCollider final : public ICollider { 
 public:
 	typedef std::shared_ptr<CylinderCollider> Sptr;
 	static CylinderCollider::Sptr Create(const glm::vec3& halfExtents = glm::vec3(0.5f, 0.5f, 1.0f));

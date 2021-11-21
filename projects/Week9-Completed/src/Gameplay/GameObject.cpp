@@ -6,6 +6,7 @@
 // GLM
 #define GLM_ENABLE_EXPERIMENTAL
 #include "GLM/gtc/matrix_transform.hpp"
+#include "GLM/gtc/quaternion.hpp"
 #include "GLM/glm.hpp"
 #include "Utils/GlmDefines.h"
 #include "Utils/ImGuiHelper.h"
@@ -22,6 +23,7 @@ namespace Gameplay {
 		_rotation(glm::quat(glm::vec3(0.0f))),
 		_scale(ONE),
 		_transform(MAT4_IDENTITY),
+		_inverseTransform(MAT4_IDENTITY),
 		_isTransformDirty(true)
 	{ }
 
@@ -35,8 +37,9 @@ namespace Gameplay {
 	}
 
 	void GameObject::LookAt(const glm::vec3& point) {
-		glm::mat3 rot = glm::lookAt(_position, point, glm::vec3(0.0f, 0.0f, 1.0f));
-		SetRotation(glm::quat(rot));
+		glm::mat4 rot = glm::lookAt(_position, point, glm::vec3(0.0f, 0.0f, 1.0f));
+		// Take the conjugate of the quaternion, as lookAt returns the *inverse* rotation
+		SetRotation(glm::conjugate(glm::quat_cast(rot)));
 	}
 
 

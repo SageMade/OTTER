@@ -4,6 +4,8 @@
 #include <iostream>
 #include <math.h>
 #include <unordered_map>
+#include <filesystem>
+#include <conio.h>
 #ifdef HAVE_AV_CONFIG_H
 #undef HAVE_AV_CONFIG_H
 #endif
@@ -28,9 +30,8 @@ extern "C" {
 #include <AudioFramework/Platform/Windows/WinAudioCapDeviceEnumerator.h>
 #include "AudioFramework/IAudioPlatform.h"
 #include "AudioFramework/Platform/Windows/WinAudioPlatform.h"
-#include <conio.h>
 #include "Logging.h"
-#include "AudioFramework/Resampler.h"
+#include "AudioFramework/Resampling/Resampler.h"
 #include "AudioFramework/AudioEncoders/IAudioEncoder.h"
 #include "AudioFramework/AudioEncoders/AacEncoder.h"
 
@@ -151,7 +152,7 @@ void StoreSampleData(uint8_t* data, size_t len, AP4_SyntheticSampleTable* table,
 	memcpy(sample_data->UseData() + (writeHeader ? 7 : 0), data, len);
 	if (numInputSamples != 1024) {
 		LOG_INFO("Received partial packet: {} samples, {} bytes", numInputSamples, len);
-		table->AddSample(*sample_data, 0, len + (writeHeader ? 7 : 0), 1024, sample_description_index, total_duration, 0, false);
+		//table->AddSample(*sample_data, 0, len + (writeHeader ? 7 : 0), 1024, sample_description_index, total_duration, 0, false);
 	} else {
 		table->AddSample(*sample_data, 0, len + (writeHeader ? 7 : 0), numInputSamples, sample_description_index, total_duration, 0, false);
 	}
@@ -469,8 +470,11 @@ int RecordStream2(const std::string& bentoPath, const std::string& ffmpegPath = 
 	selectedDevice->Init(&config);
 
 	// Perform an initial poll to sync up the device
-	selectedDevice->PollDevice([](const uint8_t** dat, size_t len) { std::cout << "hi!" << len << std::endl; });
-	selectedDevice->PollDevice([](const uint8_t** dat, size_t len) { std::cout << "hi!" << len << std::endl; });
+	int length = 0;
+	while (length = 0) {
+		selectedDevice->PollDevice([&](const uint8_t** dat, size_t len) { length = len; });
+	}
+	
 
 	// Create the audio encoder
 	AacEncoder* encoder = new AacEncoder();
@@ -489,6 +493,10 @@ int RecordStream2(const std::string& bentoPath, const std::string& ffmpegPath = 
 	resampler->SetInputFrameSampleCount(encoder->GetInputSampleCapacity());
 	resampler->MatchDestEncoding(encoder);
 	resampler->Init();
+
+	if (std::filesystem::exists(bentoPath)) {
+		std::filesystem::remove(bentoPath);
+	}
 
 	AP4_Result result;
 	AP4_ByteStream* output = NULL;
@@ -519,14 +527,14 @@ int RecordStream2(const std::string& bentoPath, const std::string& ffmpegPath = 
 
 
 	// Attach the encoder inputs as the outputs of the resampler
-	int numOutBuffers = av_sample_fmt_is_planar((AVSampleFormat)ToFfmpeg(encoder->GetInputFormat())) ? encoder->GetNumChannels() : 1;
+	int numOutBuffers = IsFormatPlanar(encoder->GetInputFormat()) ? encoder->GetNumChannels() : 1;
 	for(int ix = 0; ix < numOutBuffers; ix++) {
 		resampler->SetOutputChannelPtr(ix, encoder->GetInputBuffer(ix));
 	}
 
 	// We need to create temp buffers to fill encoder frames
 	// Calculate how many buffers we need, their size, then allocate them
-	int numInBuffers = av_sample_fmt_is_planar((AVSampleFormat)ToFfmpeg(resampler->GetInputConfig().Format)) ? resampler->GetInputConfig().NumChannels : 1 ;
+	int numInBuffers = IsFormatPlanar(resampler->GetInputConfig().Format) ? resampler->GetInputConfig().NumChannels : 1 ;
 	size_t frameByteSize = GetSampleFormatSize(resampler->GetInputConfig().Format) * encoder->GetSamplesPerInputFrame();
 	BufferFiller* bufferFiller = new BufferFiller(numInBuffers, frameByteSize);
 	// Attach the buffers from buffer filler to the inputs of the resampler
@@ -557,6 +565,12 @@ int RecordStream2(const std::string& bentoPath, const std::string& ffmpegPath = 
 	}
 
 	encoder->Flush();
+
+	selectedDevice->PollDevice([&](const uint8_t** dat, size_t len) { });
+
+	delete devices;
+	audioPlatform->Cleanup();
+	delete audioPlatform;
 
 
 	// create a movie
@@ -597,8 +611,6 @@ int RecordStream2(const std::string& bentoPath, const std::string& ffmpegPath = 
 	// write the file to the output
 	AP4_FileWriter::Write(*file, *output);
 
-	delete devices;
-	audioPlatform->Cleanup();
 	return 0;
 }
 
