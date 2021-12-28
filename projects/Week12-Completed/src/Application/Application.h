@@ -19,7 +19,9 @@ public:
 
 	~Application();
 
+	// Information about the application for when we are in editor mode
 	struct {
+		bool IsEditor = true;
 		Gameplay::GameObject::Wptr SelectedObject;
 	} EditorState;
 
@@ -38,13 +40,16 @@ public:
 	/**
 	 * Gets the width and height of the application window, in pixels
 	 */
-	const glm::ivec2 GetWindowSize() const;
+	const glm::ivec2& GetWindowSize() const;
 	/**
 	 * Resizes the application window to the given size in pixels
 	 * 
 	 * @param newSize The new size for the window, in pixels. Should not contain zeroes or negative values
 	 */
 	void ResizeWindow(const glm::ivec2& newSize);
+
+	const glm::uvec4& GetPrimaryViewport() const;
+	void SetPrimaryViewport(const glm::uvec4& value);
 
 	/**
 	 * Quits the application at the end of the current frame
@@ -88,19 +93,25 @@ public:
 		return nullptr;
 	}
 
+	void SaveSettings();
+
 protected:
+	// The GL driver layer is a special friend that can access our protected members (mainly window info)
 	friend class GLAppLayer;
 
 	Application();
 
 	// The GLFW window that the application will render to and receive events from
 	GLFWwindow* _window;
-	// The size of the above window, in pixels
-	glm::ivec2  _windowSize;
 	// The title of the above window, will appear when not in fullscreen mode
 	std::string _windowTitle;
+	// The size of the game window, in pixels
+	glm::ivec2  _windowSize;
 	// True as long as the application is running
 	bool        _isRunning;
+
+	// The primary viewport that the game will render into, in client window bounds
+	glm::uvec4  _primaryViewport;
 
 	// Stores the current application settings
 	nlohmann::json _appSettings;

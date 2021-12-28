@@ -3,6 +3,7 @@
 #include "Utils/ImGuiHelper.h"
 #include "Utils/GlmDefines.h"
 #include "Gameplay/Components/ComponentManager.h"
+#include "imgui_internal.h"
 
 InspectorWindow::InspectorWindow() = default;
 InspectorWindow::~InspectorWindow() = default;
@@ -57,21 +58,19 @@ void InspectorWindow::Render()
 			// Draw the scale
 			selection->_isLocalTransformDirty |= LABEL_LEFT(ImGui::DragFloat3, "Scale   ", &selection->_scale.x, 0.01f, 0.0f);
 
+			// For if we're not in play mode
+			selection->_RecalcLocalTransform();
+			selection->_RecalcWorldTransform();
 
 			ImGui::Separator();
 
 			// Render each component under it's own header
 			for (int ix = 0; ix < selection->_components.size(); ix++) {
 				std::shared_ptr<Gameplay::IComponent> component = selection->_components[ix];
-				if (ImGui::CollapsingHeader(component->ComponentTypeName().c_str())) {
-					ImGui::PushID(component.get());
-					component->RenderImGui();
-					// Render a delete button for the component
-					if (ImGuiHelper::WarningButton("Delete")) {
-						selection->_components.erase(selection->_components.begin() + ix);
-						ix--;
-					}
-					ImGui::PopID();
+
+				if (_RenderComponent(component)) {
+					selection->_components.erase(selection->_components.begin() + ix);
+					ix--;
 				}
 			}
 			ImGui::Separator();
@@ -93,6 +92,7 @@ void InspectorWindow::Render()
 				ImGui::EndCombo();
 			}
 			ImGui::SameLine();
+
 			// Button to add component and reset the selected type
 			if (ImGui::Button("Add Component") && selectedType.has_value() && !selection->Has(selectedType.value())) {
 				selection->Add(selectedType.value());
@@ -104,4 +104,64 @@ void InspectorWindow::Render()
 		}
 	}
 	ImGui::End();
+}
+
+bool InspectorWindow::_RenderComponent(Gameplay::IComponent::Sptr component)
+{
+	ImGui::PushID(component.get());
+
+	ImGuiID deletePopup = ImGui::GetID("Delete Component##INSPECTOR_DELETE");
+
+	ImGuiID id = ImGui::GetID(component->ComponentTypeName().c_str());
+	bool isOpen = ImGui::CollapsingHeader(component->ComponentTypeName().c_str(), ImGuiTreeNodeFlags_DefaultOpen | ImGuiTreeNodeFlags_AllowItemOverlap | ImGuiTreeNodeFlags_ClipLabelForTrailingButton);
+	ImGuiHelper::HeaderCheckbox(id, &component->IsEnabled);
+	
+	if (ImGui::BeginPopupContextItem()) {
+		if (ImGui::MenuItem("Copy Values")) {
+
+		}
+		if (ImGui::MenuItem("Paste Values")) {
+
+		}
+
+		ImGui::PushStyleColor(ImGuiCol_Header, (ImVec4)ImColor::HSV(0.0f, 0.6f, 0.6f));
+		ImGui::PushStyleColor(ImGuiCol_HeaderHovered, (ImVec4)ImColor::HSV(0.0f, 0.7f, 0.7f));
+		ImGui::PushStyleColor(ImGuiCol_HeaderActive, (ImVec4)ImColor::HSV(0.0f, 0.8f, 0.8f));
+		if (ImGui::MenuItem("Delete")) {
+			ImGui::OpenPopupEx(deletePopup);
+		}
+		ImGui::PopStyleColor(3);
+
+		ImGui::EndPopup();
+	}
+
+
+	if (ImGui::BeginPopupModal("Delete Component##INSPECTOR_DELETE")) {
+		ImGui::Text("Are you sure you want to delete this component? This cannot be undone");
+		if (ImGuiHelper::WarningButton("Yes")) {
+			// Restore imgui state so we can early bail
+			ImGui::CloseCurrentPopup();
+			ImGui::EndPopup();
+			ImGui::PopID();
+			return true;
+		}
+		ImGui::SameLine();
+		if (ImGui::Button("No")) {
+			ImGui::CloseCurrentPopup();
+		}
+		ImGui::EndPopup();
+
+	}
+
+	if (isOpen) {
+
+		ImGui::Indent();
+		component->RenderImGui();
+		ImGui::Unindent();
+	}
+
+	ImGui::Separator();
+	ImGui::PopID();
+
+	return false;
 }

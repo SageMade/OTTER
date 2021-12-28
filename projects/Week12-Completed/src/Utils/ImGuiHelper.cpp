@@ -16,6 +16,34 @@
 
 GLFWwindow* ImGuiHelper::_window = nullptr;
 
+bool CheckboxEx(ImGuiID id, ImVec2 pos, bool* value) {
+	ImGuiWindow* window = ImGui::GetCurrentWindow();
+	ImGuiContext& g = *GImGui;
+	ImGuiStyle& style = g.Style;
+
+	const float square_sz = ImGui::GetFrameHeight();
+	const ImRect total_bb(pos, ImVec2(pos.x + square_sz, pos.y + square_sz));
+
+	bool hovered, held;
+	bool pressed = ImGui::ButtonBehavior(total_bb, id, &hovered, &held);
+	if (pressed)
+	{
+		*value = !(*value);
+		ImGui::MarkItemEdited(id);
+	}
+
+	ImGui::RenderNavHighlight(total_bb, id);
+	ImGui::RenderFrame(total_bb.Min, total_bb.Max, ImGui::GetColorU32((held && hovered) ? ImGuiCol_FrameBgActive : hovered ? ImGuiCol_FrameBgHovered : ImGuiCol_FrameBg), true, style.FrameRounding);
+	ImU32 check_col = ImGui::GetColorU32(ImGuiCol_CheckMark);
+	if (*value)
+	{
+		const float pad = ImMax(1.0f, (float)(int)(square_sz / 6.0f));
+		ImGui::RenderCheckMark(ImVec2(pos.x + pad, pos.y + pad), check_col, square_sz - pad * 2.0f);
+	}
+
+	return pressed;
+}
+
 void ImGuiHelper::Init(GLFWwindow* window) {
 	LOG_ASSERT(_window == nullptr, "Init has already been called! Should only be called once per application");
 	// Store the window
@@ -72,6 +100,18 @@ bool ImGuiHelper::WarningButton(const char* text, const ImVec2& size) {
 	bool result = ImGui::Button(text, size);
 	ImGui::PopStyleColor(3);
 	return result;
+}
+
+void ImGuiHelper::HeaderCheckbox(ImGuiID headerId, bool* value)
+{
+	ImGuiWindow* window = ImGui::GetCurrentWindow();
+	ImGuiContext& g = *GImGui;
+	ImGuiItemHoveredDataBackup last_item_backup;
+	float button_size = g.FontSize;
+	float button_x = ImMax(window->DC.LastItemRect.Min.x, window->DC.LastItemRect.Max.x - g.Style.FramePadding.x * 2.0f - button_size);
+	float button_y = window->DC.LastItemRect.Min.y;
+	CheckboxEx(window->GetID((void*)((intptr_t)headerId + 1)), ImVec2(button_x, button_y), value);
+	last_item_backup.Restore();
 }
 
 void ImGuiHelper::StartFrame() {

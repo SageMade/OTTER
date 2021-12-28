@@ -266,9 +266,12 @@ namespace Gameplay {
 			std::vector<std::weak_ptr<IComponent>>& componentStore = _Components[component->_realType];
 
 			// Clear any dead weak pointers
-			std::remove_if(componentStore.begin(), componentStore.end(), [](const std::weak_ptr<IComponent>& ptr) {
+			auto it = std::remove_if(componentStore.begin(), componentStore.end(), [](const std::weak_ptr<IComponent>& ptr) {
 				return ptr.expired();
 			});
+			if (it != componentStore.end()) {
+				componentStore.erase(it);
+			}
 		}
 	};
 }

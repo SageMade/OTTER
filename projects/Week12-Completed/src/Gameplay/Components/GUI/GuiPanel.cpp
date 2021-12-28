@@ -48,18 +48,11 @@ void GuiPanel::Awake() {
 void GuiPanel::StartGUI() {
 	Texture2D::Sptr tex = _texture != nullptr ? _texture : GuiBatcher::GetDefaultTexture();
 
-	glm::vec2 min = _transform->GetMin();
-	glm::vec2 max = _transform->GetMax();
+	GuiBatcher::PushRect(glm::vec2(0,0), _transform->GetSize(), _color, tex, _borderRadius < 0 ? GuiBatcher::GetDefaultBorderRadius() : _borderRadius);
 
-	GuiBatcher::PushRect(min, max, _color, tex, _borderRadius < 0 ? GuiBatcher::GetDefaultBorderRadius() : _borderRadius);
-
-	GuiBatcher::PushScissorRect(min, max);
-	GuiBatcher::PushModelTransform(_transform->GetLocalTransform());
 }
 
 void GuiPanel::FinishGUI() {
-	GuiBatcher::PopModelTransform();
-	GuiBatcher::PopScissorRect();
 }
 
 void GuiPanel::RenderImGui()

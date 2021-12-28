@@ -8,7 +8,7 @@ namespace Gameplay {
 	/// Helper structure for material parameters to our shader
 	/// THIS IS VERY TEMPORARY
 	/// </summary>
-	struct Material : public IResource {
+	class Material : public IResource {
 	public:
 		typedef std::shared_ptr<Material> Sptr;
 		typedef std::weak_ptr<Material>   Wptr;

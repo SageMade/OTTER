@@ -73,6 +73,8 @@ public:
 
 	virtual void RenderImGui() override;
 	virtual nlohmann::json ToJson() const override;
+	virtual void StartGUI() override;
+	virtual void FinishGUI() override;
 	static RectTransform::Sptr FromJson(const nlohmann::json& blob);
 	MAKE_TYPENAME(RectTransform);
 

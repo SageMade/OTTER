@@ -73,7 +73,12 @@ void Application::Start(int argCount, char** arguments) {
 
 GLFWwindow* Application::GetWindow() { return _window; }
 
-const glm::ivec2 Application::GetWindowSize() const { return _windowSize; }
+const glm::ivec2& Application::GetWindowSize() const { return _windowSize; }
+
+
+const glm::uvec4& Application::GetPrimaryViewport() const {
+	return _primaryViewport;
+}
 
 void Application::ResizeWindow(const glm::ivec2& newSize)
 {
@@ -104,6 +109,16 @@ void Application::LoadScene(const Gameplay::Scene::Sptr& scene) {
 	_targetScene = scene;
 }
 
+
+void Application::SaveSettings()
+{
+	if (!std::filesystem::exists(std::filesystem::temp_directory_path() / _applicationName)) {
+		std::filesystem::create_directory(std::filesystem::temp_directory_path() / _applicationName);
+	}
+
+	FileHelpers::WriteContentsToFile((std::filesystem::temp_directory_path() / _applicationName / "app-settings.json").string(), _appSettings.dump(1, '\t'));
+}
+
 void Application::_Run()
 {
 	// TODO: Register layers
@@ -119,6 +134,9 @@ void Application::_Run()
 	// We'll grab these since we'll need them!
 	_windowSize.x = JsonGet(_appSettings, "window_width", DEFAULT_WINDOW_WIDTH);
 	_windowSize.y = JsonGet(_appSettings, "window_height", DEFAULT_WINDOW_HEIGHT);
+
+	// By default, we want our viewport to be the whole screen
+	_primaryViewport = { 0, 0, _windowSize.x, _windowSize.y };
 
 	// Register all component and resource types
 	_RegisterClasses();
@@ -243,7 +261,6 @@ void Application::_LateUpdate() {
 	}
 }
 
-
 void Application::_PreRender()
 {
 	for (const auto& layer : _layers) {
@@ -315,6 +332,7 @@ void Application::_HandleWindowSizeChanged(const glm::ivec2& newSize) {
 		}
 	}
 	_windowSize = newSize;
+	_primaryViewport = { 0, 0, newSize.x, newSize.y };
 }
 
 void Application::_ConfigureSettings() {

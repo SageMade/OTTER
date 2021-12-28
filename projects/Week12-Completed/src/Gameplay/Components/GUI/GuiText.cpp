@@ -76,7 +76,7 @@ void GuiText::Awake() {
 
 void GuiText::RenderGUI()
 {
-	if (_font != nullptr && ! _text.empty()) {
+	if (_font != nullptr && !_text.empty()) {
 		glm::vec2 position = _transform->GetSize() / 2.0f;
 		position -= _textSize / 2.0f;
 		GuiBatcher::RenderText(_text, _font, position, _color, _textScale);

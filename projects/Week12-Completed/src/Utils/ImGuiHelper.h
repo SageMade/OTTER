@@ -39,6 +39,8 @@ public:
 	/// </summary>
 	static void EndFrame();
 
+	static void HeaderCheckbox(ImGuiID headerId, bool* value);
+
 protected:
 	ImGuiHelper() = default;
 

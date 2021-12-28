@@ -13,6 +13,9 @@
 #include "Gameplay/Components/ComponentManager.h"
 #include "Utils/ResourceManager/IResource.h"
 
+class InspectorWindow;
+class HierarchyWindow;
+
 namespace Gameplay {
 // Predeclaration for Scene
 	class Scene;
@@ -322,6 +325,7 @@ namespace Gameplay {
 	private:
 		friend class Scene;
 		friend class InspectorWindow;
+		friend class HierarchyWindow;
 
 		// Rotation of the object as a quaternion
 		glm::quat _rotation;

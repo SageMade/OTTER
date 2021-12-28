@@ -15,6 +15,9 @@ struct GLFWwindow;
 class TextureCube;
 class ShaderProgram;
 
+class InspectorWindow;
+class HierarchyWindow;
+
 const int LIGHT_UBO_BINDING_SLOT = 0;
 
 namespace Gameplay {

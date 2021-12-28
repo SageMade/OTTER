@@ -31,6 +31,13 @@ void RenderLayer::OnRender()
 
 	Application& app = Application::Get();
 
+	const glm::uvec4& viewport = app.GetPrimaryViewport();
+	glViewport(viewport.x, viewport.y, viewport.z, viewport.w);
+	glScissor(viewport.x, viewport.y, viewport.z, viewport.w);
+
+	// Enable the scissor test;
+	glEnable(GL_SCISSOR_TEST);
+
 	_primaryFBO->Bind();
 
 	// Clear the color and depth buffers
@@ -132,8 +139,6 @@ void RenderLayer::OnRender()
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-	// Enable the scissor test;
-	glEnable(GL_SCISSOR_TEST);
 
 	// Our projection matrix will be our entire window for now
 	glm::mat4 proj = glm::ortho(0.0f, (float)app.GetWindowSize().x, (float)app.GetWindowSize().y, 0.0f, -1.0f, 1.0f);

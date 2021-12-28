@@ -7,6 +7,8 @@
 #define GLM_ENABLE_EXPERIMENTAL
 #include <GLM/gtx/common.hpp> // for fmod (floating modulus)
 
+#include <filesystem>
+
 // Graphics
 #include "Graphics/IndexBuffer.h"
 #include "Graphics/VertexBuffer.h"
@@ -85,7 +87,7 @@ void DefaultSceneLayer::_CreateScene()
 
 	bool loadScene = false;
 	// For now we can use a toggle to generate our scene vs load from file
-	if (loadScene) {
+	if (loadScene && std::filesystem::exists("scene.json")) {
 		app.LoadScene("scene.json");
 	} else {
 		// This time we'll have 2 different shaders, and share data between both of them using the UBO
@@ -295,7 +297,7 @@ void DefaultSceneLayer::_CreateScene()
 		{
 			// Make a big tiled mesh
 			MeshResource::Sptr tiledMesh = ResourceManager::CreateAsset<MeshResource>();
-			tiledMesh->AddParam(MeshBuilderParam::CreatePlane(ZERO, UNIT_Z, UNIT_X, glm::vec2(100.0f), glm::vec2(0.5f)));
+			tiledMesh->AddParam(MeshBuilderParam::CreatePlane(ZERO, UNIT_Z, UNIT_X, glm::vec2(100.0f), glm::vec2(20.0f)));
 			tiledMesh->GenerateMesh();
 
 			// Create and attach a RenderComponent to the object to draw our mesh
@@ -497,7 +499,6 @@ void DefaultSceneLayer::_CreateScene()
 				GuiText::Sptr text = subPanel->Add<GuiText>();
 				text->SetText("Hello world!");
 				text->SetFont(font);
-				text->IsEnabled = false;
 
 				monkey1->Get<JumpBehaviour>()->Panel = text;
 			}

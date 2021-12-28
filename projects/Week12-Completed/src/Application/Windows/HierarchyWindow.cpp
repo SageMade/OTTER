@@ -29,6 +29,7 @@ void HierarchyWindow::Render()
 void HierarchyWindow::_RenderObjectNode(Gameplay::GameObject::Sptr object, int depth) {
 	using namespace Gameplay;
 
+	// If the parent exists and we're at depth 0, abort
 	if (object->GetParent() != nullptr && depth == 0) {
 		return;
 	}
@@ -62,8 +63,11 @@ void HierarchyWindow::_RenderObjectNode(Gameplay::GameObject::Sptr object, int d
 		app.EditorState.SelectedObject = object;
 	}
 
+	// We need to get the ID of the modal out here, since the menu item will push new 
+	// IDs to the stack and cause issues
 	ImGuiID deletePopup = ImGui::GetID("Delete Gameobject###HIERARCHY_DELETE");
 
+	// Render a popup on right-click
 	if (ImGui::BeginPopupContextItem()) {
 		if (ImGui::MenuItem("Add Child")) {
 			object->AddChild(object->GetScene()->CreateGameObject("GameObject"));
@@ -81,6 +85,11 @@ void HierarchyWindow::_RenderObjectNode(Gameplay::GameObject::Sptr object, int d
 		if (ImGuiHelper::WarningButton("Yes")) {
 			// Remove ourselves from the scene
 			object->GetScene()->RemoveGameObject(object);
+
+			// If the parent is not null, let it know we just killed it's child
+			if (object->GetParent() != nullptr) {
+				object->GetParent()->_PurgeDeletedChildren();
+			}
 
 			// Restore imgui state so we can early bail
 			ImGui::CloseCurrentPopup();
@@ -104,6 +113,8 @@ void HierarchyWindow::_RenderObjectNode(Gameplay::GameObject::Sptr object, int d
 		for (const auto& child : object->GetChildren()) {
 			_RenderObjectNode(child, depth + 1);
 		}
+
+		// We also need the tree pop so that we finish the tree node
 		ImGui::TreePop();
 	}
 

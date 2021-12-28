@@ -105,7 +105,7 @@ void GuiBatcher::RenderText(const std::wstring& text, const Font::Sptr& font, co
 	glm::vec2 offset = glm::vec2(0.0f);
 
 	// Transform the origin based off the model transform
-	glm::vec2 origin = __model * glm::vec3(position, 1.0f);
+	glm::vec2 origin = position;
 
 	// Gets the texture used to render the font
 	Texture2D::Sptr atlas = font->GetAtlas();
@@ -120,6 +120,8 @@ void GuiBatcher::RenderText(const std::wstring& text, const Font::Sptr& font, co
 	verts[1].Color = color;
 	verts[2].Color = color;
 	verts[3].Color = color;
+
+	float depth = mesh.Builder.GetVertexCount() / 1000.0f;
 
 	// Iterate over all characters in string
 	for (int i = 0; i < length; i++) {
@@ -143,14 +145,16 @@ void GuiBatcher::RenderText(const std::wstring& text, const Font::Sptr& font, co
 		}
 		// All other characters get rendered
 		else {
-			verts[0].Position = glm::vec3(origin + (offset + glyph.Positions[0]) * scale, 0.0f);
-			verts[1].Position = glm::vec3(origin + (offset + glyph.Positions[1]) * scale, 0.0f);
-			verts[2].Position = glm::vec3(origin + (offset + glyph.Positions[2]) * scale, 0.0f);
-			verts[3].Position = glm::vec3(origin + (offset + glyph.Positions[3]) * scale, 0.0f);
+			verts[0].Position = __model * glm::vec3(origin + (offset + glyph.Positions[0]) * scale, 1.0f);
+			verts[1].Position = __model * glm::vec3(origin + (offset + glyph.Positions[1]) * scale, 1.0f);
+			verts[2].Position = __model * glm::vec3(origin + (offset + glyph.Positions[2]) * scale, 1.0f);
+			verts[3].Position = __model * glm::vec3(origin + (offset + glyph.Positions[3]) * scale, 1.0f);
 			verts[0].UV = glyph.UVs[0];
 			verts[1].UV = glyph.UVs[1];
 			verts[2].UV = glyph.UVs[2];
 			verts[3].UV = glyph.UVs[3];
+
+			verts[0].Position.z = verts[1].Position.z = verts[2].Position.z = verts[3].Position.z = depth;
 
 			uint32_t ix = mesh.Builder.AddVertexRange(verts, 4);
 			mesh.Builder.AddIndexTri(ix + 0, ix + 1, ix + 2);
@@ -209,13 +213,13 @@ void GuiBatcher::Flush()
 
 void GuiBatcher::PushModelTransform(const glm::mat3& transform) {
 	__modelTransformStack.push_back(transform);
-	__model = transform * __model;
+	__model = __model * transform;
 }
 
 void GuiBatcher::PopModelTransform()
 {
 	LOG_ASSERT(__modelTransformStack.size() > 0, "Transform push/pop mismatch");
-	__model = glm::inverse(__modelTransformStack.back()) * __model;
+	__model = __model * glm::inverse(__modelTransformStack.back());
 	__modelTransformStack.pop_back();
 }
 
