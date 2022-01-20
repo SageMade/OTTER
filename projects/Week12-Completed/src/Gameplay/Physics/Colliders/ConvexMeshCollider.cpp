@@ -123,16 +123,16 @@ namespace Gameplay::Physics {
 					glGetNamedBufferSubData(indexBuff->GetHandle(), 0, indexBuff->GetTotalSize(), indexStore);
 
 					// Iterate over index triangles
-					for (int ix = 0; ix < indexBuff->GetElementCount(); ix+=3) {
+					for (size_t ix = 0; ix < indexBuff->GetElementCount(); ix+=3) {
 						// Extract index from the raw data
-						int i1 = getBufferIndex(indexBuff, indexStore, ix);
-						int i2 = getBufferIndex(indexBuff, indexStore, ix + 1);
-						int i3 = getBufferIndex(indexBuff, indexStore, ix + 2);
+						int i1 = getBufferIndex(indexBuff, indexStore, static_cast<int>(ix));
+						int i2 = getBufferIndex(indexBuff, indexStore, static_cast<int>(ix + 1));
+						int i3 = getBufferIndex(indexBuff, indexStore, static_cast<int>(ix + 2));
 
 						// Find the positions for the indices
-						glm::vec3 p1 = *reinterpret_cast<glm::vec3*>(vertexStore + (i1 * posAttrib.Stride) + posAttrib.Offset);
-						glm::vec3 p2 = *reinterpret_cast<glm::vec3*>(vertexStore + (i2 * posAttrib.Stride) + posAttrib.Offset);
-						glm::vec3 p3 = *reinterpret_cast<glm::vec3*>(vertexStore + (i3 * posAttrib.Stride) + posAttrib.Offset);
+						glm::vec3 p1 = *reinterpret_cast<glm::vec3*>(vertexStore + (posAttrib.Stride * i1) + posAttrib.Offset);
+						glm::vec3 p2 = *reinterpret_cast<glm::vec3*>(vertexStore + (posAttrib.Stride * i2) + posAttrib.Offset);
+						glm::vec3 p3 = *reinterpret_cast<glm::vec3*>(vertexStore + (posAttrib.Stride * i3) + posAttrib.Offset);
 
 						// Add the triangle
 						_triMesh->addTriangle(ToBt(p1), ToBt(p2), ToBt(p3));
@@ -145,7 +145,7 @@ namespace Gameplay::Physics {
 				// We only have vertex data, create triangles sequentially
 				else {
 					// Iterate over triangles, and add each to the mesh
-					for (int ix = 0; ix < vertexBuff->GetElementCount(); ix+=3) {
+					for (size_t ix = 0; ix < vertexBuff->GetElementCount(); ix+=3) {
 						glm::vec3 p1 = *reinterpret_cast<glm::vec3*>(vertexStore + ((ix + 0) * posAttrib.Stride) + posAttrib.Offset);
 						glm::vec3 p2 = *reinterpret_cast<glm::vec3*>(vertexStore + ((ix + 1) * posAttrib.Stride) + posAttrib.Offset);
 						glm::vec3 p3 = *reinterpret_cast<glm::vec3*>(vertexStore + ((ix + 2) * posAttrib.Stride) + posAttrib.Offset);

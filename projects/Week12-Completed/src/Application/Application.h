@@ -17,6 +17,8 @@ public:
 	NO_MOVE(Application)
 	NO_COPY(Application)
 
+	bool IsFocused = true;
+
 	~Application();
 
 	// Information about the application for when we are in editor mode
@@ -48,7 +50,15 @@ public:
 	 */
 	void ResizeWindow(const glm::ivec2& newSize);
 
+	/**
+	 * Gets the viewport that the game will appear in on the screen. For non-editor versions, this should be the entire screen
+	 * @returns The bounds for the viewport, in screenspace, formatted as { x, y, width, height }
+	 */
 	const glm::uvec4& GetPrimaryViewport() const;
+	/**
+	 * Sets the viewport that the game will appear in on the screen. For non-editor versions, this should be the entire screen
+	 * @param value The bounds for the viewport, in screenspace, formatted as { x, y, width, height }
+	 */
 	void SetPrimaryViewport(const glm::uvec4& value);
 
 	/**
@@ -92,7 +102,10 @@ public:
 		}
 		return nullptr;
 	}
-
+	
+	/**
+	 * Saves the application settings to a file in %APPDATA% 
+	 */
 	void SaveSettings();
 
 protected:
@@ -110,6 +123,9 @@ protected:
 	// True as long as the application is running
 	bool        _isRunning;
 
+	// Not an idea way of distinguising, since we need to build editor into our game, but good 'nuff for GDW
+	bool        _isEditor;
+
 	// The primary viewport that the game will render into, in client window bounds
 	glm::uvec4  _primaryViewport;
 
@@ -123,6 +139,8 @@ protected:
 
 	// Stores all the layers of the application, in the order they should be invoked
 	std::vector<ApplicationLayer::Sptr> _layers;
+
+	Framebuffer::Sptr _renderOutput;
 
 	void _Run();
 	void _RegisterClasses();

@@ -5,6 +5,7 @@
 
 GLAppLayer::GLAppLayer() :
 	ApplicationLayer() {
+	Name = "OpenGL Layer";
 	Overrides = AppLayerFunctions::OnAppLoad | AppLayerFunctions::OnAppUnload;
 }
 

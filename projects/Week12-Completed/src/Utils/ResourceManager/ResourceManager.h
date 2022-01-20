@@ -4,10 +4,10 @@
 #include <unordered_map>
 #include <typeindex>
 
-#include "Graphics/Texture2D.h";
-#include "Graphics/VertexArrayObject.h";
-#include "Graphics/ShaderProgram.h";
-#include "Gameplay/Material.h";
+#include "Graphics/Texture2D.h"
+#include "Graphics/VertexArrayObject.h"
+#include "Graphics/ShaderProgram.h"
+#include "Gameplay/Material.h"
 
 #include "Utils/GUID.hpp"
 #include "Utils/ResourceManager/IResource.h"
@@ -133,9 +133,10 @@ public:
 	/// <summary>
 	/// Gets the current JSON manifest
 	/// </summary>
-	static const nlohmann::json& GetManifest();
+	static const nlohmann::ordered_json& GetManifest();
 	/// <summary>
-	/// Loads a manifest file into the resource manager
+	/// Loads a manifest file into the resource manager. Note that this will not perform load on the assets themselves 
+	/// unless preloadAssets is set to true
 	/// </summary>
 	/// <param name="path">The path to the JSON manifest file</param>
 	/// <param name="preloadAssets">True if all assets should be loaded into memory</param>

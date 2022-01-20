@@ -24,7 +24,7 @@ public:
 	/// <summary>
 	/// Gets the VAO of the underlying mesh resource
 	/// </summary>
-	const VertexArrayObject::Sptr& GetMesh() const;
+	VertexArrayObject::Sptr GetMesh() const;
 	/// <summary>
 	/// Gets the material that this renderer is using
 	/// </summary>

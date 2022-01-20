@@ -5,6 +5,8 @@
 #include <json.hpp>
 #include <GLM/glm.hpp>
 
+#include "Graphics/Framebuffer.h"
+
 /**
  * Enumeration flags that let the application know what functions a layer has overriden,
  * can be used for a bit of a performance boost (since calling empty virtual functions can
@@ -33,9 +35,9 @@ ENUM_FLAGS(AppLayerFunctions, uint32_t,
  */
 class ApplicationLayer {
 public:
-	MAKE_PTRS(ApplicationLayer)
-	NO_MOVE(ApplicationLayer)
-	NO_COPY(ApplicationLayer)
+	MAKE_PTRS(ApplicationLayer);
+	NO_MOVE(ApplicationLayer);
+	NO_COPY(ApplicationLayer);
 
 	/**
 	 * When enabled, all commands in the layer will be invoked by the application
@@ -85,7 +87,7 @@ public:
 	/**
 	 * Invoked after LateUpdate, allows layers to perform rendering
 	 */
-	virtual void OnRender() {};
+	virtual void OnRender(const Framebuffer::Sptr& prevLayer) {};
 
 	virtual void OnPostRender() {};
 
@@ -104,6 +106,18 @@ public:
 	 * @param config The updated application configuration settings for this layer
 	 */
 	virtual void NotifyAppConfigChanged(const nlohmann::json& config) {}
+
+	/**
+	 * Returns the render output for the application layer. If the result is nullptr, this 
+	 * layer is rendering to the primary FBO
+	 */
+	virtual Framebuffer::Sptr GetRenderOutput() { return nullptr; }
+
+	/**
+	 * Returns the render output from the layer's PostRender pass. If the result is nullptr, this
+	 * layer is either disable for PostRender, or renders to the primary FBO
+	 */
+	virtual Framebuffer::Sptr GetPostRenderOutput() { return nullptr; }
 
 	/**
 	 * Allows the layer to return default application configuration settings for the layer

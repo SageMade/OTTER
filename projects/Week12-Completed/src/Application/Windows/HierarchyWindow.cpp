@@ -1,29 +1,34 @@
 #include "HierarchyWindow.h"
 #include "../Application.h"
-#include "../../Week9-Completed/src/Utils/ImGuiHelper.h"
+#include "Utils/ImGuiHelper.h"
 #include "imgui_internal.h"
 
 HierarchyWindow::HierarchyWindow() :
 	IEditorWindow()
 {
-
+	Name           = "Hierarchy";
+	SplitDirection = ImGuiDir_::ImGuiDir_Right;
+	SplitDepth     = 0.2f;
 }
 
 HierarchyWindow::~HierarchyWindow() = default;
 
 void HierarchyWindow::Render()
 {
-	Open = ImGui::Begin("Hierarchy");
+	Application& app = Application::Get();
 
-	if (Open) {
-		Application& app = Application::Get();
-		
-		for (const auto& object : app.CurrentScene()->_objects) {
-			_RenderObjectNode(object);
+	// Render a popup on right-click
+	if (ImGui::BeginPopupContextItem()) {
+		if (ImGui::MenuItem("Add New Object")) {
+			app.CurrentScene()->CreateGameObject("GameObject");
 		}
-	}
 
-	ImGui::End();
+		ImGui::EndPopup();
+	}
+		
+	for (const auto& object : app.CurrentScene()->_objects) {
+		_RenderObjectNode(object);
+	}
 }
 
 void HierarchyWindow::_RenderObjectNode(Gameplay::GameObject::Sptr object, int depth) {
@@ -35,6 +40,7 @@ void HierarchyWindow::_RenderObjectNode(Gameplay::GameObject::Sptr object, int d
 	}
 
 	Application& app = Application::Get();
+	Scene::Sptr& scene = app.CurrentScene();
 
 	ImGui::PushID(object->GetGUID().str().c_str());
 
@@ -75,6 +81,17 @@ void HierarchyWindow::_RenderObjectNode(Gameplay::GameObject::Sptr object, int d
 		if (ImGui::MenuItem("Delete")) {
 			ImGui::OpenPopupEx(deletePopup);
 		}
+
+		ImGui::Separator();
+
+		char buffer[64];
+		scene->Components().EachType([&](const std::string& typeName, const std::type_index type) {
+			// Hide component types already added
+			sprintf_s(buffer, "Add %s", typeName.c_str());
+			if (ImGui::MenuItem(buffer, nullptr, nullptr, !object->Has(type))) {
+				object->Add(type);
+			}
+		});
 
 		ImGui::EndPopup();
 	}

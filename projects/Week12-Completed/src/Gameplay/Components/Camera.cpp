@@ -33,6 +33,7 @@ namespace Gameplay {
 			{ "fov_radians", _fovRadians },
 			{ "ortho_size", _orthoVerticalScale },
 			{ "ortho_enabled", _isOrtho },
+			{ "clear_color", _clearColor }
 		};
 	}
 
@@ -44,6 +45,7 @@ namespace Gameplay {
 		result->_fovRadians         = JsonGet(data, "fov_radians", result->_fovRadians);
 		result->_orthoVerticalScale = JsonGet(data, "ortho_size", result->_orthoVerticalScale);
 		result->_isOrtho            = JsonGet(data, "ortho_enabled", result->_isOrtho);
+		result->_clearColor         = JsonGet(data, "clear_color", result->_clearColor);
 		result->_isProjectionDirty  = true;
 		return result;
 	}
@@ -101,6 +103,15 @@ namespace Gameplay {
 	const glm::mat4& Camera::GetViewProjection() const {
 		_viewProjection = __CalculateProjection() * GetGameObject()->GetInverseTransform();
 		return _viewProjection;
+	}
+
+	const glm::vec4& Camera::GetClearColor() const
+	{
+		return _clearColor;
+	}
+
+	void Camera::SetClearColor(const glm::vec4& color) {
+		_clearColor = color;
 	}
 
 	const glm::mat4& Camera::__CalculateProjection() const

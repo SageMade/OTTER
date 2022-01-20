@@ -27,7 +27,7 @@ public:
 	/// <summary>
 	/// Gets the ASCII string being rendered
 	/// </summary>
-	const std::string& GetText() const;
+	std::string GetText() const;
 	/// <summary>
 	/// Sets the ASCII text being rendered
 	/// </summary>

@@ -1,4 +1,9 @@
 #include "Application/Application.h"
+
+#include <Windows.h>
+#include <GLFW/glfw3.h>
+#include <glad/glad.h>
+
 #include "Logging.h"
 #include "Gameplay/InputEngine.h"
 #include "Application/Timing.h"
@@ -39,12 +44,15 @@
 #include "Gameplay/Components/GUI/GuiPanel.h"
 #include "Gameplay/Components/GUI/GuiText.h"
 #include "Layers/RenderLayer.h"
+#include "Layers/InterfaceLayer.h"
 #include "Layers/DefaultSceneLayer.h"
 #include "Layers/LogicUpdateLayer.h"
 #include "Layers/ImGuiDebugLayer.h"
+#include "Utils/ImGuiHelper.h"
+#include "Gameplay/Components/ComponentManager.h"
 
 Application* Application::_singleton = nullptr;
-std::string Application::_applicationName = "INFR-2130U - DEMO";
+std::string Application::_applicationName = "INFR-2350U - DEMO";
 
 #define DEFAULT_WINDOW_WIDTH 800
 #define DEFAULT_WINDOW_HEIGHT 600
@@ -53,9 +61,11 @@ Application::Application() :
 	_window(nullptr),
 	_windowSize({DEFAULT_WINDOW_WIDTH, DEFAULT_WINDOW_HEIGHT}),
 	_isRunning(false),
-	_windowTitle("INFR - 2130U"),
+	_isEditor(true),
+	_windowTitle("INFR - 2350U"),
 	_currentScene(nullptr),
-	_targetScene(nullptr)
+	_targetScene(nullptr),
+	_renderOutput(nullptr)
 { }
 
 Application::~Application() = default;
@@ -78,6 +88,10 @@ const glm::ivec2& Application::GetWindowSize() const { return _windowSize; }
 
 const glm::uvec4& Application::GetPrimaryViewport() const {
 	return _primaryViewport;
+}
+
+void Application::SetPrimaryViewport(const glm::uvec4& value) {
+	_primaryViewport = value;
 }
 
 void Application::ResizeWindow(const glm::ivec2& newSize)
@@ -109,24 +123,31 @@ void Application::LoadScene(const Gameplay::Scene::Sptr& scene) {
 	_targetScene = scene;
 }
 
-
 void Application::SaveSettings()
 {
-	if (!std::filesystem::exists(std::filesystem::temp_directory_path() / _applicationName)) {
-		std::filesystem::create_directory(std::filesystem::temp_directory_path() / _applicationName);
+	std::filesystem::path appdata = getenv("APPDATA");
+	std::filesystem::path settingsPath = appdata / _applicationName / "app-settings.json";
+
+	if (!std::filesystem::exists(appdata / _applicationName)) {
+		std::filesystem::create_directory(appdata / _applicationName);
 	}
 
-	FileHelpers::WriteContentsToFile((std::filesystem::temp_directory_path() / _applicationName / "app-settings.json").string(), _appSettings.dump(1, '\t'));
+	FileHelpers::WriteContentsToFile(settingsPath.string(), _appSettings.dump(1, '\t'));
 }
 
 void Application::_Run()
 {
 	// TODO: Register layers
 	_layers.push_back(std::make_shared<GLAppLayer>());
-	_layers.push_back(std::make_shared<RenderLayer>());
 	_layers.push_back(std::make_shared<DefaultSceneLayer>());
+	_layers.push_back(std::make_shared<RenderLayer>());
+	_layers.push_back(std::make_shared<InterfaceLayer>());
 	_layers.push_back(std::make_shared<LogicUpdateLayer>());
-	_layers.push_back(std::make_shared<ImGuiDebugLayer>());
+
+	// If we're in editor mode, we add all the editor layers
+	if (_isEditor) {
+		_layers.push_back(std::make_shared<ImGuiDebugLayer>());
+	}
 
 	// Either load the settings, or use the defaults
 	_ConfigureSettings();
@@ -141,11 +162,12 @@ void Application::_Run()
 	// Register all component and resource types
 	_RegisterClasses();
 
+
 	// Load all layers
 	_Load();
 
 	// Grab current time as the previous frame
-	float lastFrame =  static_cast<float>(glfwGetTime());
+	double lastFrame =  glfwGetTime();
 
 	// Done loading, app is now running!
 	_isRunning = true;
@@ -181,6 +203,8 @@ void Application::_Run()
 		timing._timeSinceSceneLoad += scaledDt;
 		timing._unscaledTimeSinceSceneLoad += dt;
 
+		ImGuiHelper::StartFrame();
+
 		// Core update loop
 		if (_currentScene != nullptr) {
 			_Update();
@@ -192,6 +216,9 @@ void Application::_Run()
 
 		// Store timing for next loop
 		lastFrame = thisFrame;
+
+		InputEngine::EndFrame();
+		ImGuiHelper::EndFrame();
 
 		glfwSwapBuffers(_window);
 
@@ -242,6 +269,10 @@ void Application::_Load() {
 
 	// Pass the window to the input engine and let it initialize itself
 	InputEngine::Init(_window);
+	
+	// Initialize our ImGui helper
+	ImGuiHelper::Init(_window);
+
 	GuiBatcher::SetWindowSize(_windowSize);
 }
 
@@ -263,6 +294,14 @@ void Application::_LateUpdate() {
 
 void Application::_PreRender()
 {
+	glm::ivec2 size ={ 0, 0 };
+	glfwGetWindowSize(_window, &size.x, &size.y);
+	glViewport(0, 0, size.x, size.y);
+	glScissor(0, 0, size.x, size.y);
+
+	// Clear the screen
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+
 	for (const auto& layer : _layers) {
 		if (layer->Enabled && *(layer->Overrides & AppLayerFunctions::OnPreRender)) {
 			layer->OnPreRender();
@@ -271,11 +310,17 @@ void Application::_PreRender()
 }
 
 void Application::_RenderScene() {
+
+	Framebuffer::Sptr result = nullptr;
 	for (const auto& layer : _layers) {
 		if (layer->Enabled && *(layer->Overrides & AppLayerFunctions::OnRender)) {
-			layer->OnRender();
+			layer->OnRender(result);
+			Framebuffer::Sptr layerResult = layer->GetRenderOutput();
+			result = layerResult != nullptr ? layerResult : result;
 		}
 	}
+	_renderOutput = result;
+
 }
 
 void Application::_PostRender() {
@@ -284,7 +329,30 @@ void Application::_PostRender() {
 		const auto& layer = *it;
 		if (layer->Enabled && *(layer->Overrides & AppLayerFunctions::OnPostRender)) {
 			layer->OnPostRender();
+			Framebuffer::Sptr layerResult = layer->GetPostRenderOutput();
+			_renderOutput = layerResult != nullptr ? layerResult : _renderOutput;
 		}
+	}
+
+	// We can use the application's viewport to set our OpenGL viewport, as well as clip rendering to that area
+	const glm::uvec4& viewport = GetPrimaryViewport();
+	glViewport(viewport.x, viewport.y, viewport.z, viewport.w);
+	glScissor(viewport.x, viewport.y, viewport.z, viewport.w);
+
+	// If we have a final output, blit it to the screen
+	if (_renderOutput != nullptr) {
+		_renderOutput->Unbind();
+
+		glm::ivec2 windowSize = _windowSize;
+		if (_isEditor) {
+			glfwGetWindowSize(_window, &windowSize.x, &windowSize.y);
+		}
+		//glViewport(0, 0, windowSize.x, windowSize.y);
+		glm::ivec4 viewportMinMax ={ viewport.x, viewport.y, viewport.x + viewport.z, viewport.y + viewport.w };
+
+		_renderOutput->Bind(FramebufferBinding::Read);
+		glBindFramebuffer(*FramebufferBinding::Write, 0);
+		Framebuffer::Blit({ 0, 0, _renderOutput->GetWidth(), _renderOutput->GetHeight() }, viewportMinMax, BufferFlags::All, MagFilter::Nearest);
 	}
 }
 
@@ -296,6 +364,9 @@ void Application::_Unload() {
 			layer->OnAppUnload();
 		}
 	}
+
+	// Clean up ImGui
+	ImGuiHelper::Cleanup();
 }
 
 void Application::_HandleSceneChange() {
@@ -322,6 +393,11 @@ void Application::_HandleSceneChange() {
 	// Wake up all game objects in the scene
 	_currentScene->Awake();
 
+	// If we are not in editor mode, scenes play by default
+	if (!_isEditor) {
+		_currentScene->IsPlaying = true;
+	}
+
 	_targetScene = nullptr;
 }
 
@@ -341,7 +417,7 @@ void Application::_ConfigureSettings() {
 
 	// We'll store our settings in the %APPDATA% directory, under our application name
 	std::filesystem::path appdata = getenv("APPDATA");
-	std::filesystem::path settingsPath = std::filesystem::temp_directory_path() / _applicationName / "app-settings.json";
+	std::filesystem::path settingsPath = appdata / _applicationName / "app-settings.json";
 
 	// If the settings file exists, we can load it in!
 	if (std::filesystem::exists(settingsPath)) {
@@ -351,6 +427,10 @@ void Application::_ConfigureSettings() {
 
 		// We use merge_patch so that we can keep our defaults if they are missing from the file!
 		_appSettings.merge_patch(blob);
+	}
+	// If the file does not exist, save the default application settings to the path
+	else {
+		SaveSettings();
 	}
 }
 

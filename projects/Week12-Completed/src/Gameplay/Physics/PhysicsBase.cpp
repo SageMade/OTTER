@@ -75,9 +75,9 @@ int PhysicsBase::_editorSelectedColliderType = 0;
 			nlohmann::json blob;
 			blob["guid"] = collider->_guid.str();
 			blob["type"] = ~collider->_type;
-			blob["position"] = GlmToJson(collider->_position);
-			blob["rotation"] = GlmToJson(collider->_rotation);
-			blob["scale"]    = GlmToJson(collider->_scale);
+			blob["position"] = (collider->_position);
+			blob["rotation"] = (collider->_rotation);
+			blob["scale"]    = (collider->_scale);
 			collider->ToJson(blob);
 			output["colliders"].push_back(blob);
 		}
@@ -100,9 +100,9 @@ int PhysicsBase::_editorSelectedColliderType = 0;
 				if (collider != nullptr) {
 					// Copy in collider info
 					collider->_guid = Guid(blob["guid"]);
-					collider->_position = ParseJsonVec3(blob["position"]);
-					collider->_rotation = ParseJsonVec3(blob["rotation"]);
-					collider->_scale = ParseJsonVec3(blob["scale"]);
+					collider->_position = JsonGet(blob, "position", collider->_position);
+					collider->_rotation = JsonGet(blob, "rotation", collider->_rotation);
+					collider->_scale    = JsonGet(blob, "scale", collider->_scale);
 					// Allow the derived loading
 					collider->FromJson(blob);
 					// Mark dirty and store

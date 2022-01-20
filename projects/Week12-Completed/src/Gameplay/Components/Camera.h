@@ -81,6 +81,9 @@ namespace Gameplay {
 		/// </summary>
 		const glm::mat4& GetViewProjection() const;
 
+		const glm::vec4& GetClearColor() const;
+		void SetClearColor(const glm::vec4& color);
+
 	protected:
 		float _nearPlane;
 		float _farPlane;
@@ -97,6 +100,8 @@ namespace Gameplay {
 		mutable glm::mat4 _viewProjection;
 		// A dirty flag that indicates whether we need to re-calculate our view projection matrix
 		mutable bool      _isDirty;
+
+		glm::vec4         _clearColor;
 
 		// Recalculates the projection matrix
 		const glm::mat4& __CalculateProjection() const;

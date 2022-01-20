@@ -60,10 +60,10 @@ MeshBuilderParam MeshBuilderParam::FromJson(const nlohmann::json& blob) {
 	MeshBuilderParam result;
 	result.Type = JsonParseEnum(MeshBuilderType, blob, "type", MeshBuilderType::Unknown);
 	LOG_ASSERT(result.Type != MeshBuilderType::Unknown, "Failed to get type!");
-	result.Color = ParseJsonVec4(blob["color"]);
+	result.Color = blob["color"];
 	if (blob.contains("params") && blob["params"].is_object()) {
 		for (auto& [key, value] : blob["params"].items()) {
-			result.Params[key] = ParseJsonVec3(value);
+			result.Params[key] = value;
 		}
 	}
 	return result;
@@ -72,10 +72,10 @@ MeshBuilderParam MeshBuilderParam::FromJson(const nlohmann::json& blob) {
 nlohmann::json MeshBuilderParam::ToJson() const {
 	nlohmann::json result;
 	result["type"] = ~Type;
-	result["color"] = GlmToJson(Color);
+	result["color"] = Color;
 	result["params"] = nlohmann::json();
 	for (auto& [key, value] : Params) {
-		result["params"][key] = GlmToJson(value);
+		result["params"][key] = value;
 	}
 	return result;
 }

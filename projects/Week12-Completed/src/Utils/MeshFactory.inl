@@ -102,7 +102,7 @@ uint32_t AddMiddlePoint(glm::vec3 scale, glm::vec3 center, uint32_t a, uint32_t 
 		}
 
 		// Get the index of the new vertex, store it in the cache
-		uint32_t ix = vertices.size();
+		uint32_t ix = static_cast<uint32_t>(vertices.size());
 		midpointCache[key] = ix;
 
 		// Add vertex to data and return it's index
@@ -193,8 +193,8 @@ void MeshFactory::AddIcoSphere(MeshBuilder<Vertex>& data, const glm::vec3& cente
 		return;
 	}
 
-	uint32_t indexOffset = data.GetVertexCount();
-	uint32_t initialIndex = data.GetIndexCount();
+	uint32_t indexOffset  = static_cast<uint32_t>(data.GetVertexCount());
+	uint32_t initialIndex = static_cast<uint32_t>(data.GetIndexCount());
 	std::vector<glm::ivec3> faces;
 
 	uint32_t estimatedFaces = 12 + pow(tessellation + 1, 3);
@@ -297,8 +297,8 @@ void MeshFactory::AddUvSphere(MeshBuilder<Vertex>& data, const glm::vec3& center
 	int numverts = (slices + 1) * (slices - 1) + 2;
 	std::vector<Vertex>& verts = data._vertices;
 
-	uint32_t offset = verts.size();
-	uint32_t initialIndex = data._indices.size();
+	uint32_t offset       = static_cast<uint32_t>(verts.size());
+	uint32_t initialIndex = static_cast<uint32_t>(data._indices.size());
 	verts.reserve(verts.size() + numverts);
 
 	float stackAngle, sliceAngle;

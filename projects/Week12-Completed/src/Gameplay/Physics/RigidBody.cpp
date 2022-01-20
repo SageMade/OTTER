@@ -86,7 +86,7 @@ namespace Gameplay::Physics {
 		_angularVelocityDirty = true;
 	}
 
-	const glm::vec3& RigidBody::GetAngularVelocity() const
+	glm::vec3 RigidBody::GetAngularVelocity() const
 	{
 		return glm::degrees(ToGlm(_angularVelocity));
 	}

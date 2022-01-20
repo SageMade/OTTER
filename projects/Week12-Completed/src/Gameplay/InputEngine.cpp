@@ -41,7 +41,7 @@ const glm::dvec2& InputEngine::GetMousePos() {
 	return __mousePos;
 }
 
-const glm::dvec2& InputEngine::GetMouseDelta() {
+glm::dvec2 InputEngine::GetMouseDelta() {
 	return __mousePos - __prevMousePos;
 }
 

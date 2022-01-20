@@ -23,7 +23,7 @@ namespace Gameplay {
 		/// <param name="typeName">The name of the type to load (taken from GetComponentTypeName of component)</param>
 		/// <param name="blob">The JSON blob to decode</param>
 		/// <returns>The component as decoded from the JSON data, or nullptr</returns>
-		static IComponent::Sptr Load(const std::string& typeName, const nlohmann::json& blob) {
+		inline IComponent::Sptr Load(const std::string& typeName, const nlohmann::json& blob) {
 			// Try and get the type index from the name
 			std::optional<std::type_index> typeIndex = _TypeNameMap[typeName];
 
@@ -55,7 +55,7 @@ namespace Gameplay {
 		/// </summary>
 		/// <param name="typeName">The name of the type to load (taken from GetComponentTypeName of component)</param>
 		/// <returns>A new component of the given type, or nullptr</returns>
-		static inline IComponent::Sptr Create(const std::string& typeName) {
+		inline IComponent::Sptr Create(const std::string& typeName) {
 			// Try and get the type index from the name
 			std::optional<std::type_index> typeIndex = _TypeNameMap[typeName];
 
@@ -84,7 +84,7 @@ namespace Gameplay {
 		/// </summary>
 		/// <param name="typeName">The name of the type to load (taken from GetComponentTypeName of component)</param>
 		/// <returns>A new component of the given type, or nullptr</returns>
-		static inline IComponent::Sptr Create(const std::type_index& type) {
+		inline IComponent::Sptr Create(const std::type_index& type) {
 			// Try and get the type index from the name
 			LOG_ASSERT(_TypeLoadRegistry[type] != nullptr, "You must register component types before creating them!");
 
@@ -107,7 +107,7 @@ namespace Gameplay {
 		/// 
 		/// </summary>
 		/// <param name="callback"></param>
-		static inline void EachType(std::function<void(const std::string& typeName, std::type_index type)> callback) {
+		inline void EachType(std::function<void(const std::string& typeName, std::type_index type)> callback) {
 			for (auto& [name, type] : _TypeNameMap) {
 				if (type.has_value()) {
 					callback(name, type.value());
@@ -126,8 +126,7 @@ namespace Gameplay {
 			typename ComponentType, 
 			typename ... TArgs, 
 			typename = typename std::enable_if<std::is_base_of<IComponent, ComponentType>::value>::type>
-		static std::shared_ptr<ComponentType> Create(TArgs&& ... args) {
-			// We can use typeid and type_index to get a unique ID for our types
+		std::shared_ptr<ComponentType> Create(TArgs&& ... args) {
 			std::type_index type = std::type_index(typeid(ComponentType));
 			LOG_ASSERT(_TypeLoadRegistry[type] != nullptr, "You must register component types before creating them!");
 
@@ -156,15 +155,16 @@ namespace Gameplay {
 		template <
 			typename ComponentType,
 			typename = typename std::enable_if<std::is_base_of<IComponent, ComponentType>::value>::type>
-		static std::shared_ptr<ComponentType> GetComponentByGUID(Guid id) {
+		std::shared_ptr<ComponentType> GetComponentByGUID(Guid id) {
 			// We can use typeid and type_index to get a unique ID for our types
 			std::type_index type = std::type_index(typeid(ComponentType));
 			LOG_ASSERT(_TypeLoadRegistry[type] != nullptr, "You must register component types before creating them!");
 
 			// Clear any dead weak pointers
-			std::remove_if(_Components[type].begin(), _Components[type].end(), [](const std::weak_ptr<IComponent>& ptr) {
+			auto removeIt = std::remove_if(_Components[type].begin(), _Components[type].end(), [](const std::weak_ptr<IComponent>& ptr) {
 				return ptr.expired();
 			});
+			_Components[type].erase(removeIt, _Components[type].end());
 
 			// Search the component store for a component that matches that ID
 			auto& it = std::find_if(_Components[type].begin(), _Components[type].end(), [&](const std::weak_ptr<IComponent>& ptr) {
@@ -189,7 +189,7 @@ namespace Gameplay {
 		template <
 			typename ComponentType,
 			typename = typename std::enable_if<std::is_base_of<IComponent, ComponentType>::value>::type>
-		static void Each(std::function<void(const std::shared_ptr<ComponentType>&)> callback, bool includeDisabled = false) {
+		void Each(std::function<void(const std::shared_ptr<ComponentType>&)> callback, bool includeDisabled = false) {
 			// We can use typeid and type_index to get a unique ID for our types
 			std::type_index type = std::type_index(typeid(ComponentType));
 			LOG_ASSERT(_TypeLoadRegistry[type] != nullptr, "You must register component types before creating them!");
@@ -224,9 +224,16 @@ namespace Gameplay {
 				// Store the loading function in the registry, as well as the
 				// name to type index mapping
 				_TypeLoadRegistry[type] = &ComponentManager::ParseTypeFromBlob<T>;
-				_TypeCreateRegistry[type] = &ComponentManager::Create<T>;
+				_TypeCreateRegistry[type] = &ComponentManager::_InternalCreate<T>;
 				_TypeNameMap[StringTools::SanitizeClassName(typeid(T).name())] = type;
 			}
+		}
+
+		/// <summary>
+		/// Removes all components of all types from the registry, whether they are referenced elsewhere or not
+		/// </summary>
+		inline void FlushAll() {
+			_Components = std::unordered_map<std::type_index, std::vector<std::weak_ptr<IComponent>>>();
 		}
 
 	private:
@@ -245,11 +252,29 @@ namespace Gameplay {
 		// Weak pointers let us store a reference to an object stored by a shared pointer, without
 		// actually increasing the reference count. Thus components will be destroyed at the correct
 		// time (when the only reference is the one stored here).
-		inline static std::unordered_map<std::type_index, std::vector<std::weak_ptr<IComponent>>> _Components;  
+		std::unordered_map<std::type_index, std::vector<std::weak_ptr<IComponent>>> _Components;  
 
 		template <typename T>
 		static IComponent::Sptr ParseTypeFromBlob(const nlohmann::json& blob) {
 			return T::FromJson(blob);
+		}
+
+		template <typename ComponentType>
+		static IComponent::Sptr _InternalCreate() {
+			// We can use typeid and type_index to get a unique ID for our types
+			std::type_index type = std::type_index(typeid(ComponentType));
+			LOG_ASSERT(_TypeLoadRegistry[type] != nullptr, "You must register component types before creating them!");
+
+			// Create component, forwarding arguments
+			std::shared_ptr<ComponentType> component = std::make_shared<ComponentType>();
+
+			// Make sure the component knows it's concrete type
+			component->_realType = type;
+			// Give the component a weak pointer to itself that it can upcast to a shared pointer when needed
+			component->_weakSelfPtr = component;
+
+			// Return the result
+			return component;
 		}
 
 		/// <summary>
@@ -258,7 +283,7 @@ namespace Gameplay {
 		/// <typeparam name="ComponentType">The type of component to destroy</typeparam>
 		/// <param name="component">A raw pointer to the component to remove (should be called from IComponent destructor)</param>
 		/// <returns>True if the element was removed, false if not</returns>
-		inline static void Remove(const IComponent* component) {
+		inline void Remove(const IComponent* component) {
 			// Make sure the component's type was one that was registered
 			LOG_ASSERT(_TypeLoadRegistry[component->_realType] != nullptr, "You must register component types before creating them!");
 

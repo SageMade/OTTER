@@ -48,17 +48,17 @@ protected:
 		// A check value so we can ensure that we're loading in the right file type
 		char      HeaderBytes[4] ={ 'B', 'O', 'B', 'J' };
 		// The version code, we can use this to create different loaders if our format changes
-		uint16_t  Version;
+		uint16_t  Version = 0;
 		// The number of indices in the mesh
-		uint32_t  NumIndices;
+		uint32_t  NumIndices = 0;
 		// The type of index to load
-		IndexType IndicesType;
+		IndexType IndicesType = IndexType::Unknown;
 		// The number of vertices in the mesh
-		uint32_t  NumVertices;
+		uint32_t  NumVertices = 0;
 		// The size of a single vertex structure
-		uint16_t  VertexStride;
+		uint16_t  VertexStride = 0;
 		// The number of vertex attributes (basically how many VDECL entries there are)
-		uint8_t   NumAttributes;
+		uint8_t   NumAttributes = 0;
 	};
 
 	OptimizedObjLoader() = default;

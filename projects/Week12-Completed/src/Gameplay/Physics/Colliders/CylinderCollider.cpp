@@ -21,12 +21,12 @@ namespace Gameplay::Physics {
 	}
 
 	void CylinderCollider::ToJson(nlohmann::json & blob) const {
-		blob["half_extents"] = GlmToJson(_extents);
+		blob["half_extents"] = (_extents);
 	}
 
 	void CylinderCollider::FromJson(const nlohmann::json & data)
 	{
-		_extents = ParseJsonVec3(data["half_extents"]);
+		_extents = (data["half_extents"]);
 	}
 
 	btCollisionShape* CylinderCollider::CreateShape() const {

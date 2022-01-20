@@ -61,7 +61,7 @@ VertexArrayObject::Sptr ObjLoader::LoadFromFile(const std::string& filename, boo
 	glm::vec3 vecData;
 	glm::ivec3 vertexIndices;
 
-	float startTime = glfwGetTime();
+	float startTime = static_cast<float>(glfwGetTime());
 
 	// Read and process the entire file
 	while (file.peek() != EOF) {
@@ -131,7 +131,7 @@ VertexArrayObject::Sptr ObjLoader::LoadFromFile(const std::string& filename, boo
 						edges[ix] = it->second;
 					} else {
 						vertices.push_back(vertexIndices - glm::ivec3(1));
-						uint32_t index = vertices.size() - 1;
+						uint32_t index = static_cast<uint32_t>(vertices.size()) - 1;
 
 						// Cache the index based on our key
 						vertexMap[key] = index;
@@ -184,7 +184,7 @@ VertexArrayObject::Sptr ObjLoader::LoadFromFile(const std::string& filename, boo
 	}
 
 	// Calculate and trace out how long it took us to load
-	float endTime = glfwGetTime();
+	float endTime = static_cast<float>(glfwGetTime());
 	LOG_TRACE("Loaded OBJ file \"{}\" in {} seconds ({} vertices, {} indices)", filename, endTime - startTime, mesh.GetVertexCount(), mesh.GetIndexCount());
 
 	// Move our data into a VAO and return it

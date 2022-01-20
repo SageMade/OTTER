@@ -33,7 +33,7 @@ public:
 	/// <param name="count">The number of verties in data</param>
 	/// <returns>The starting index in the mesh for the range of data</returns>
 	uint32_t AddVertexRange(const VertType* data, uint32_t count) {
-		uint32_t index = _vertices.size();
+		uint32_t index = static_cast<uint32_t>(_vertices.size());
 		// Reserve space for the incoming vertices, ensures the underlying datastore will be large enough
 		_vertices.reserve(_vertices.size() + count);
 		// Copy data into the container, this will also update the container's size!

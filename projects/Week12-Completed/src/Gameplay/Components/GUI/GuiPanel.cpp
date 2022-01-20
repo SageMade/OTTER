@@ -63,7 +63,7 @@ void GuiPanel::RenderImGui()
 
 nlohmann::json GuiPanel::ToJson() const {
 	return {
-		{ "color",   GlmToJson(_color) },
+		{ "color",   _color },
 		{ "border",  _borderRadius },
 		{ "texture", _texture  ? _texture->GetGUID().str() : "null" }
 	};
@@ -72,7 +72,7 @@ nlohmann::json GuiPanel::ToJson() const {
 GuiPanel::Sptr GuiPanel::FromJson(const nlohmann::json& blob) {
 	GuiPanel::Sptr result = std::make_shared<GuiPanel>();
 
-	result->_color        = ParseJsonVec4(blob["color"]);
+	result->_color        = JsonGet(blob, "color", result->_color);
 	result->_borderRadius = JsonGet(blob, "border", 0);
 	result->_texture      = ResourceManager::Get<Texture2D>(Guid(JsonGet<std::string>(blob, "texture", "null")));
 

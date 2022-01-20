@@ -16,6 +16,6 @@
 	Type(const Type&) = delete;
 
 #define DEFINE_RESOURCE(Type) \
-	MAKE_PTRS(Type) \
-	NO_MOVE(Type) \
+	MAKE_PTRS(Type); \
+	NO_MOVE(Type); \
 	NO_COPY(Type) 

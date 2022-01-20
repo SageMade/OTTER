@@ -22,11 +22,11 @@ namespace Gameplay::Physics {
 	}
 
 	void BoxCollider::FromJson(const nlohmann::json& data) {
-		_extents = ParseJsonVec3(data["extents"]);
+		_extents = data["extents"];
 	}
 
 	void BoxCollider::ToJson(nlohmann::json& blob) const {
-		blob["extents"] = GlmToJson(_extents);
+		blob["extents"] = _extents;
 	}
 
 	void BoxCollider::DrawImGui() {

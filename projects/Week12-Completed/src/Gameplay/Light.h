@@ -10,11 +10,11 @@ namespace Gameplay {
 		/// <summary>
 		/// The position of the light in the world
 		/// </summary>
-		glm::vec3 Position;
+		glm::vec3 Position = glm::vec3(0.0f);
 		/// <summary>
 		/// The color of the light in RGB
 		/// </summary>
-		glm::vec3 Color;
+		glm::vec3 Color = glm::vec3(1.0f);
 		/// <summary>
 		/// The approximate range of our light in world units (meters)
 		/// </summary>
@@ -25,8 +25,8 @@ namespace Gameplay {
 		/// </summary>
 		inline static Light FromJson(const nlohmann::json& data) {
 			Light result;
-			result.Position = ParseJsonVec3(data["position"]);
-			result.Color = ParseJsonVec3(data["color"]);
+			result.Position = data["position"];
+			result.Color = data["color"];
 			result.Range = data["range"].get<float>();
 			return result;
 		}
@@ -36,8 +36,8 @@ namespace Gameplay {
 		/// </summary>
 		inline nlohmann::json ToJson() const {
 			return {
-				{ "position", GlmToJson(Position) },
-				{ "color", GlmToJson(Color) },
+				{ "position", Position },
+				{ "color", Color },
 				{ "range", Range },
 			};
 		}

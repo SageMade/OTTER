@@ -1,6 +1,8 @@
 #pragma once
 
 #include "Utils/Macros.h"
+#include "imgui.h"
+#include <string>
 
 /**
  * The editor window interface allows us to separate implementation for 
@@ -12,7 +14,12 @@ public:
 	NO_COPY(IEditorWindow);
 	NO_MOVE(IEditorWindow);
 
-	bool Open = true;
+	bool        Open = true;
+	ImGuiDir_   SplitDirection = ImGuiDir_::ImGuiDir_Left;
+	float       SplitDepth = 0.2f;
+	std::string Name;
+	std::string ParentName;
+	ImGuiID     DockId;
 
 	virtual ~IEditorWindow() =default;
 

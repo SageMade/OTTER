@@ -20,11 +20,11 @@ namespace Gameplay::Physics {
 	}
 
 	void PlaneCollider::ToJson(nlohmann::json& blob) const {
-		blob["normal"] = GlmToJson(_normal);
+		blob["normal"] = (_normal);
 	}
 
 	void PlaneCollider::FromJson(const nlohmann::json& data) {
-		_normal = ParseJsonVec3(data["normal"]);
+		_normal = (data["normal"]);
 	}
 
 	btCollisionShape* PlaneCollider::CreateShape() const {

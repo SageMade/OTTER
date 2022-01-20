@@ -23,7 +23,7 @@ const Gameplay::MeshResource::Sptr& RenderComponent::GetMeshResource() const {
 	return _mesh;
 }
 
-const VertexArrayObject::Sptr& RenderComponent::GetMesh() const {
+VertexArrayObject::Sptr RenderComponent::GetMesh() const {
 	return _mesh ? _mesh->Mesh : nullptr;
 }
 

@@ -49,7 +49,7 @@ void OptimizedObjLoader::ConvertToBinary(const std::string& inFile, const std::s
 	// Load in the input file
 	MeshBuilder<VertexPosNormTexColTangents>* mesh = _LoadFromObjFile(inFile);
 
-	float startTime = glfwGetTime();
+	float startTime = static_cast<float>(glfwGetTime());
 
 	// If we didn't get an output path, just take the input and replace the extension
 	std::string outFileName = outFile;
@@ -65,7 +65,7 @@ void OptimizedObjLoader::ConvertToBinary(const std::string& inFile, const std::s
 	// Save the mesh to the file
 	SaveBinaryFile(*mesh, outFileName);
 
-	float endTime = glfwGetTime();
+	float endTime = static_cast<float>(glfwGetTime());
 	LOG_TRACE("Converted OBJ file to binary \"{}\" in {} seconds ({} vertices, {} indices)", inFile, endTime - startTime, mesh->GetVertexCount(), mesh->GetIndexCount());
 
 	// We no longer need the mesh data, free it
@@ -105,7 +105,7 @@ MeshBuilder<VertexPosNormTexColTangents>* OptimizedObjLoader::_LoadFromObjFile(c
 	glm::vec3 vecData;
 	glm::ivec3 vertexIndices;
 
-	float startTime = glfwGetTime();
+	float startTime = static_cast<float>(glfwGetTime());
 
 	// Read and process the entire file
 	while (file.peek() != EOF) {
@@ -174,7 +174,7 @@ MeshBuilder<VertexPosNormTexColTangents>* OptimizedObjLoader::_LoadFromObjFile(c
 						edges[ix] = it->second;
 					} else {
 						vertices.push_back(vertexIndices - glm::ivec3(1));
-						uint32_t index = vertices.size() - 1;
+						uint32_t index = static_cast<uint32_t>(vertices.size()) - 1;
 
 						// Cache the index based on our key
 						vertexMap[key] = index;
@@ -226,7 +226,7 @@ MeshBuilder<VertexPosNormTexColTangents>* OptimizedObjLoader::_LoadFromObjFile(c
 	MeshFactory::CalculateTBN(*mesh);
 
 	// Calculate and trace out how long it took us to load
-	float endTime = glfwGetTime();
+	float endTime = static_cast<float>(glfwGetTime());
 	LOG_TRACE("Loaded OBJ file \"{}\" in {} seconds ({} vertices, {} indices)", filename, endTime - startTime, mesh->GetVertexCount(), mesh->GetIndexCount());
 
 	// Move our data into a VAO and return it
@@ -240,7 +240,7 @@ VertexArrayObject::Sptr OptimizedObjLoader::_LoadFromBinFile(const std::string& 
 	// If our file fails to open, we will throw an error
 	if (!file) { throw std::runtime_error("Failed to open file"); }
 
-	float startTime = glfwGetTime();
+	float startTime = static_cast<float>(glfwGetTime());
 
 	// Get the file size so we can avoid reading past the end
 	file.seekg(0, std::ios::end);
@@ -318,7 +318,7 @@ VertexArrayObject::Sptr OptimizedObjLoader::_LoadFromBinFile(const std::string& 
 		result->SetVDecl(vertexDeclaration);
 
 		// Calculate and trace out how long it took us to load
-		float endTime = glfwGetTime();
+		float endTime = static_cast<float>(glfwGetTime());
 		LOG_TRACE("Loaded OBJ file \"{}\" in {} seconds ({} vertices, {} indices)", filename, endTime - startTime, header.NumVertices, header.NumIndices);
 
 		return result;

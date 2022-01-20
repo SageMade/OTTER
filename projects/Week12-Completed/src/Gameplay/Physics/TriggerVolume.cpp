@@ -86,7 +86,7 @@ namespace Gameplay::Physics {
 
 					// Make sure that the object is not a kinematic or static object (note: you may want
 					// to modify this behaviour depending on your game)
-					if ((body->getCollisionFlags() & btCollisionObject::CF_STATIC_OBJECT & btCollisionObject::CF_KINEMATIC_OBJECT == 0) ||
+					if (((body->getCollisionFlags() & btCollisionObject::CF_STATIC_OBJECT & btCollisionObject::CF_KINEMATIC_OBJECT) == 0) ||
 						((body->getCollisionFlags() & btCollisionObject::CF_STATIC_OBJECT) == *(_typeFlags & TriggerTypeFlags::Statics)) ||
 						((body->getCollisionFlags() & btCollisionObject::CF_KINEMATIC_OBJECT) == *(_typeFlags & TriggerTypeFlags::Kinematics))) {
 

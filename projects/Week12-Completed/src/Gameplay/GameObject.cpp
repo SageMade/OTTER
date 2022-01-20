@@ -51,13 +51,21 @@ namespace Gameplay {
 	}
 
 	void GameObject::_RecalcWorldTransform() const {
+		// Start by determining our local transform if required
 		_RecalcLocalTransform();
+
+		// If our world transform has been marked as dirty, we need to recalculate it!
 		if (_isWorldTransformDirty) {
 			GameObject::Sptr parent = _parent;
+
+			// If out parent exists, we apply our local transformation relative to the parent's world transformation
 			if (parent != nullptr) {
 				_worldTransform = parent->GetTransform() * _localTransform;
 				_inverseWorldTransform = glm::inverse(_worldTransform);
-			} else {
+			}
+
+			// If our parent is null, we can simply use the local transform as the world transform
+			else {
 				_worldTransform = _localTransform;
 				_inverseWorldTransform = _inverseLocalTransform;
 			}
@@ -66,9 +74,10 @@ namespace Gameplay {
 	}
 
 	void GameObject::_PurgeDeletedChildren() {
-		std::remove_if(_children.begin(), _children.end(), [](WeakRef child) { 
+		auto it = std::remove_if(_children.begin(), _children.end(), [](WeakRef child) { 
 			return child == nullptr; 
 		});
+		_children.erase(it, _children.end());
 	}
 
 	void GameObject::LookAt(const glm::vec3& point) {
@@ -235,7 +244,7 @@ namespace Gameplay {
 		LOG_ASSERT(!Has(type), "Cannot add 2 instances of a component type to a game object");
 
 		// Make a new component, forwarding the arguments
-		std::shared_ptr<IComponent> component = ComponentManager::Create(type);
+		std::shared_ptr<IComponent> component = _scene->_components.Create(type);
 		// Let the component know we are the parent
 		component->_context = this;
 
@@ -259,6 +268,7 @@ namespace Gameplay {
 		// Make sure the object isn't already a child of this object
 		auto it = std::find_if(_children.begin(), _children.end(), [child](GameObject::WeakRef wPtr) { return wPtr == child;});
 
+		// As long as the child is not already a child of this gameobject, add it
 		if (it == _children.end()) {
 			// Add child, set parent, and mark it's world transform as dirty, since the parent's transform now 
 			// applies to the child
@@ -391,7 +401,7 @@ namespace Gameplay {
 			static std::string preview = "";
 			static std::optional<std::type_index> selectedType;
 			if (ImGui::BeginCombo("##AddComponents", preview.c_str())) {
-				ComponentManager::EachType([&](const std::string& typeName, const std::type_index type) {
+				_scene->Components().EachType([&](const std::string& typeName, const std::type_index type) {
 					// Hide component types already added
 					if (!Has(type)) {
 						bool isSelected = typeName == preview;
@@ -433,19 +443,20 @@ namespace Gameplay {
 		return _selfRef.lock();
 	}
 
-	GameObject::Sptr GameObject::FromJson(const nlohmann::json& data)
+	GameObject::Sptr GameObject::FromJson(Scene* scene, const nlohmann::json& data)
 	{
 		// We need to manually construct since the GameObject constructor is
 		// protected. We can call it here since Scene is a friend class of GameObjects
 		GameObject::Sptr result(new GameObject());
+		result->_scene = scene;
 
 		// Load in basic info
 		result->Name = data["name"];
 		result->_guid = Guid(data["guid"]);
 		result->_parent = WeakRef(Guid(data.contains("parent") ? data["parent"] : "null"), nullptr);
-		result->_position = ParseJsonVec3(data["position"]);
-		result->_rotation = ParseJsonQuat(data["rotation"]);
-		result->_scale    = ParseJsonVec3(data["scale"]);
+		result->_position = (data["position"]);
+		result->_rotation = (data["rotation"]);
+		result->_scale    = (data["scale"]);
 		result->_isLocalTransformDirty = true;
 		result->_isWorldTransformDirty = true;
 
@@ -456,7 +467,7 @@ namespace Gameplay {
 			// We need to reference the component registry to load our components
 			// based on the type name (note that all component types need to be
 			// registered at the start of the application)
-			IComponent::Sptr component = ComponentManager::Load(typeName, value);
+			IComponent::Sptr component = scene->Components().Load(typeName, value);
 			component->_context = result.get();
 
 			// Add component to object and allow it to perform self initialization
@@ -472,9 +483,9 @@ namespace Gameplay {
 		nlohmann::json result = {
 			{ "name", Name },
 			{ "guid", _guid.str() },
-			{ "position", GlmToJson(_position) },
-			{ "rotation", GlmToJson(_rotation) },
-			{ "scale",    GlmToJson(_scale) },
+			{ "position", _position },
+			{ "rotation", _rotation },
+			{ "scale",    _scale },
 			{ "parent",   parent == nullptr ? "null" : parent->_guid.str() },
 		};
 		result["components"] = nlohmann::json();

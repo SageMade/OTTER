@@ -23,20 +23,20 @@ IBuffer::~IBuffer() {
 	}
 }
 
-void IBuffer::LoadData(const void* data, size_t elementSize, size_t elementCount) {
+void IBuffer::LoadData(const void* data, uint32_t elementSize, uint32_t elementCount) {
 	// Note, this is part of the bindless state access stuff added in 4.5
-	glNamedBufferData(_rendererId, elementSize * elementCount, data, (GLenum)_usage);
+	glNamedBufferData(_rendererId, (GLsizeiptr)elementSize * elementCount, data, (GLenum)_usage);
 
 	_elementCount = elementCount;
 	_elementSize = elementSize;
 	_size = elementCount * elementSize;
 }
 
-void IBuffer::UpdateData(const void* data, size_t elementSize, size_t elementCount, bool allowResize /*= true*/)
+void IBuffer::UpdateData(const void* data, uint32_t elementSize, uint32_t elementCount, bool allowResize /*= true*/)
 {
 	if (elementSize * elementCount > _size) {
 		if (allowResize) {
-			glNamedBufferData(_rendererId, elementSize * elementCount, data, (GLenum)_usage);
+			glNamedBufferData(_rendererId, (GLsizeiptr)elementSize * elementCount, data, (GLenum)_usage);
 
 			LOG_INFO("Expanding buffer from {} bytes to {} bytes", _size, elementCount * elementSize);
 
@@ -48,10 +48,10 @@ void IBuffer::UpdateData(const void* data, size_t elementSize, size_t elementCou
 		}
 	} else {
 		if (_size == 0) {
-			glNamedBufferData(_rendererId, elementSize * elementCount, data, (GLenum)_usage);
+			glNamedBufferData(_rendererId, (GLsizeiptr)elementSize * elementCount, data, (GLenum)_usage);
 			_size = elementCount * elementSize;
 		} else {
-			glNamedBufferSubData(_rendererId, 0, elementSize * elementCount, data);
+			glNamedBufferSubData(_rendererId, 0, (GLsizeiptr)elementSize * elementCount, data);
 		}
 		_elementCount = elementCount;
 		_elementSize = elementSize;

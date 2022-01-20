@@ -5,7 +5,7 @@
 #include <glad/glad.h>
 #include <EnumToString.h>
 
-#include "Utils/ResourceManager/IResource.h";
+#include "Utils/ResourceManager/IResource.h"
 #include "Utils/Macros.h"
 
 /**

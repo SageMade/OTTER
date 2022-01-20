@@ -64,6 +64,7 @@ enum class PixelType : GLint{
 
 // These are our options for GL_TEXTURE_WRAP_T, GL_TEXTURE_WRAP_S and GL_TEXTURE_WRAP_R
 enum class WrapMode : GLint {
+	Unknown           = GL_NONE,
 	ClampToEdge       = GL_CLAMP_TO_EDGE,
 	ClampToBorder     = GL_CLAMP_TO_BORDER,
 	MirroredRepeat    = GL_MIRRORED_REPEAT,
@@ -83,8 +84,8 @@ enum class MinFilter : GLint {
 
 // These are our available options for the GL_TEXTURE_MAG_FILTER setting
 enum class MagFilter : GLint {
-	Nearest = GL_NEAREST,
-	Linear  = GL_LINEAR  // This is the default setting
+	Nearest           = GL_NEAREST,
+	Linear            = GL_LINEAR  // This is the default setting
 };
 
 /*

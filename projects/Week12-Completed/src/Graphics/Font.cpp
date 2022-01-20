@@ -304,7 +304,7 @@ nlohmann::json Font::ToJson() const
 
 	nlohmann::json ranges = std::vector<nlohmann::json>();
 	for (auto& range : _glyphRanges) {
-		ranges.push_back(GlmToJson(range));
+		ranges.push_back(range);
 	}
 	blob["ranges"] = ranges;
 	return blob;
@@ -321,7 +321,7 @@ Font::Sptr Font::FromJson(const nlohmann::json& data) {
 	// Iterate over the ranges and add them to the font
 	if (data.contains("ranges") && data["ranges"].is_array()) {
 		for (const auto& rangeData : data["ranges"]) {
-			glm::uvec2 range = ParseJsonVec<2, uint32_t>(rangeData);
+			glm::uvec2 range = rangeData;
 			result->AddGlyphRange(range.x, range.y);
 		}
 	}

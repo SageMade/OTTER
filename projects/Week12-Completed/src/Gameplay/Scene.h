@@ -187,6 +187,9 @@ namespace Gameplay {
 		/// </summary>
 		nlohmann::json ToJson() const;
 
+		ComponentManager& Components() { return _components; }
+		const ComponentManager& Components() const { return _components; }
+
 		/// <summary>
 		/// Saves this scene to an output JSON file
 		/// </summary>
@@ -205,6 +208,10 @@ namespace Gameplay {
 
 	protected:
 		friend class HierarchyWindow;
+		friend class GameObject;
+
+		// The component manager will store all components for objects in this scene
+		ComponentManager _components;
 
 		// Bullet physics stuff world
 		btDynamicsWorld*          _physicsWorld;

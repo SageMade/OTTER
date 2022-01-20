@@ -91,7 +91,7 @@ namespace Gameplay::Physics {
 		/// <summary>
 		/// Gets the bodies angular velocity, in degrees/s
 		/// </summary>
-		const glm::vec3& GetAngularVelocity() const;
+		glm::vec3 GetAngularVelocity() const;
 
 		/// <summary>
 		/// Sets the angular factor for this body. The velocity along each

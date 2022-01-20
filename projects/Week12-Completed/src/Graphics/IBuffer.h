@@ -25,9 +25,9 @@ public:
 	/// <param name="data">The data that you want to load into the buffer</param>
 	/// <param name="elementSize">The size of a single element, in bytes</param>
 	/// <param name="elementCount">The number of elements to upload</param>
-	virtual void LoadData(const void* data, size_t elementSize, size_t elementCount);
+	virtual void LoadData(const void* data, uint32_t elementSize, uint32_t elementCount);
 
-	virtual void UpdateData(const void* data, size_t elementSize, size_t elementCount, bool allowResize = true);
+	virtual void UpdateData(const void* data, uint32_t elementSize, uint32_t elementCount, bool allowResize = true);
 
 	/// <summary>
 	/// Loads an array of data into this buffer, using the bindless method glNamedBufferData
@@ -36,22 +36,22 @@ public:
 	/// <param name="data">A pointer to the firest element in the array</param>
 	/// <param name="count">The number of elements in the array to upload</param>
 	template <typename T>
-	void LoadData(const T* data, size_t count) {
+	void LoadData(const T* data, uint32_t count) {
 		IBuffer::LoadData((const void*)(data), sizeof(T), count);
 	}
 
 	/// <summary>
 	/// Returns the number of elements that are loaded into this buffer
 	/// </summary>
-	size_t GetElementCount() const { return _elementCount; }
+	uint32_t GetElementCount() const { return _elementCount; }
 	/// <summary>
 	/// Returns the size in bytes of a single element in this buffer
 	/// </summary>
-	size_t GetElementSize() const { return _elementSize; }
+	uint32_t GetElementSize() const { return _elementSize; }
 	/// <summary>
 	/// Returns the total size in bytes that this buffer occupies
 	/// </summary>
-	size_t GetTotalSize() const { return _size; }
+	uint32_t GetTotalSize() const { return _size; }
 	/// <summary>
 	/// Returns the type of buffer (ex GL_ARRAY_BUFFER, GL_ARRAY_ELEMENT_BUFFER, etc...)
 	/// </summary>
@@ -89,9 +89,9 @@ protected:
 	/// <param name="usage">The usage hint for the buffer (EX: GL_STATIC_DRAW, GL_DYNAMIC_DRAW)</param>
 	IBuffer(BufferType type, BufferUsage usage);
 	
-	size_t _elementSize; // The size or stride of our elements
-	size_t _elementCount; // The number of elements in the buffer
-	size_t _size; // The size of the buffer in bytes
+	uint32_t _elementSize; // The size or stride of our elements
+	uint32_t _elementCount; // The number of elements in the buffer
+	uint32_t _size; // The size of the buffer in bytes
 	BufferUsage _usage; // The buffer usage mode (GL_STATIC_DRAW, GL_DYNAMIC_DRAW)
 	BufferType _type; // The buffer type (ex GL_ARRAY_BUFFER, GL_ARRAY_ELEMENT_BUFFER)
 };

@@ -68,7 +68,7 @@
 DefaultSceneLayer::DefaultSceneLayer() :
 	ApplicationLayer()
 {
-	Name = "DefaultScene";
+	Name = "Default Scene";
 	Overrides = AppLayerFunctions::OnAppLoad;
 }
 
@@ -121,16 +121,13 @@ void DefaultSceneLayer::_CreateScene()
 			{ ShaderPartType::Fragment, "shaders/fragment_shaders/toon_shading.glsl" }
 		});
 
-
-		///////////////////// NEW SHADERS ////////////////////////////////////////////
-
 		// This shader handles our displacement mapping example
 		ShaderProgram::Sptr displacementShader = ResourceManager::CreateAsset<ShaderProgram>(std::unordered_map<ShaderPartType, std::string>{
 			{ ShaderPartType::Vertex, "shaders/vertex_shaders/displacement_mapping.glsl" },
 			{ ShaderPartType::Fragment, "shaders/fragment_shaders/frag_tangentspace_normal_maps.glsl" }
 		});
 
-		// This shader handles our displacement mapping example
+		// This shader handles our tangent space normal mapping
 		ShaderProgram::Sptr tangentSpaceMapping = ResourceManager::CreateAsset<ShaderProgram>(std::unordered_map<ShaderPartType, std::string>{
 			{ ShaderPartType::Vertex, "shaders/vertex_shaders/basic.glsl" },
 			{ ShaderPartType::Fragment, "shaders/fragment_shaders/frag_tangentspace_normal_maps.glsl" }
@@ -218,7 +215,6 @@ void DefaultSceneLayer::_CreateScene()
 			toonMaterial->Set("u_Material.Steps", 8);
 		}
 
-		/////////////// NEW MATERIALS ////////////////////
 
 		Material::Sptr displacementTest = ResourceManager::CreateAsset<Material>(displacementShader);
 		{

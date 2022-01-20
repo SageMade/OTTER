@@ -1,6 +1,7 @@
 #include "Gameplay/Components/IComponent.h"
 #include "Gameplay/Components/ComponentManager.h"
 #include "Gameplay/GameObject.h"
+#include "Gameplay/Scene.h"
 
 namespace Gameplay {
 	GameObject* IComponent::GetGameObject() const {
@@ -31,6 +32,6 @@ namespace Gameplay {
 	{ }
 
 	IComponent::~IComponent() {
-		ComponentManager::Remove(this);
+		_context->GetScene()->Components().Remove(this);
 	}
 }

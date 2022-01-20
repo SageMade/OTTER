@@ -17,7 +17,7 @@ void ResourceManager::Init() {
 	//_manifest["materials"] = std::vector<nlohmann::json>();
 }
 
-const nlohmann::json& ResourceManager::GetManifest() {
+const nlohmann::ordered_json& ResourceManager::GetManifest() {
 	return _manifest;
 }
 

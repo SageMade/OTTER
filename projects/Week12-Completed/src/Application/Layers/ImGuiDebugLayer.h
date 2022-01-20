@@ -44,9 +44,14 @@ public:
 	virtual void OnAppLoad(const nlohmann::json& config) override;
 	virtual void OnAppUnload() override;
 	virtual void OnPreRender() override;
-	virtual void OnRender() override;
+	virtual void OnRender(const Framebuffer::Sptr& prevLayer) override;
 	virtual void OnPostRender() override;
 
 protected:
 	std::vector<IEditorWindow::Sptr> _windows;
+	nlohmann::json _backupState;
+	bool           _dockInvalid;
+
+	void _RenderGameWindow();
+	ImGuiID& _FindOpenParentWindow(const IEditorWindow::Sptr& window, ImGuiID& mainID, ImGuiDir* direction, float* dist);
 };

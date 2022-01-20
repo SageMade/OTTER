@@ -27,7 +27,7 @@ public:
 		IBuffer(BufferType::Index, usage), _elementType(indexType) { }
 
 	// We'll override the LoadData to force users to use our overload that takes in the element type as well
-	inline void LoadData(const void* data, size_t elementSize, size_t elementCount) override {
+	inline void LoadData(const void* data, uint32_t elementSize, uint32_t elementCount) override {
 		throw std::runtime_error("Must use the templated overload, or the LoadData that specifies the element type");
 	}
 
@@ -38,7 +38,7 @@ public:
 	/// <param name="elementSize">The size of a single element, in bytes</param>
 	/// <param name="elementCount">The number of elements to upload</param>
 	/// <param name="elementType">The type of elements you are storing (GL_UNSIGNED_BYTE, GL_UNSIGNED_SHORT, GL_UNSIGNED_INT)</param>
-	inline void LoadData(const void* data, size_t elementSize, size_t elementCount, IndexType elementType) {
+	inline void LoadData(const void* data, uint32_t elementSize, uint32_t elementCount, IndexType elementType) {
 		IBuffer::LoadData(data, elementSize, elementCount);
 		_elementType = elementType;
 	}
@@ -50,7 +50,7 @@ public:
 	/// <param name="data">A pointer to the start of the array</param>
 	/// <param name="count">The number of elements in the array to upload</param>
 	template <typename T>
-	void LoadData(const T* data, size_t count) { throw std::runtime_error("Must be one of uint8_t, uint16_t or uint32_t"); } // Note, see template specializations below
+	void LoadData(const T* data, uint32_t count) { throw std::runtime_error("Must be one of uint8_t, uint16_t or uint32_t"); } // Note, see template specializations below
 
 	/// <summary>
 	/// Gets the underlying index type for this buffer (GL_UNSIGNED_BYTE, GL_UNSIGNED_SHORT, GL_UNSIGNED_INT)
@@ -71,17 +71,17 @@ protected:
 // can have specialized behaviour for each of the types, neat!
 
 template<>
-inline void IndexBuffer::LoadData<uint8_t>(const uint8_t* data, size_t count) {
+inline void IndexBuffer::LoadData<uint8_t>(const uint8_t* data, uint32_t count) {
 	IBuffer::LoadData<uint8_t>(data, count);
 	_elementType = IndexType::UByte;
 }
 template<>
-inline void IndexBuffer::LoadData<uint16_t>(const uint16_t* data, size_t count) {
+inline void IndexBuffer::LoadData<uint16_t>(const uint16_t* data, uint32_t count) {
 	IBuffer::LoadData<uint16_t>(data, count);
 	_elementType = IndexType::UShort;
 }
 template<>
-inline void IndexBuffer::LoadData<uint32_t>(const uint32_t* data, size_t count) {
+inline void IndexBuffer::LoadData<uint32_t>(const uint32_t* data, uint32_t count) {
 	IBuffer::LoadData<uint32_t>(data, count);
 	_elementType = IndexType::UInt;
 }

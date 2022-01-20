@@ -29,7 +29,7 @@ public:
 	static bool IsMouseButtonDown(int button);
 
 	static const glm::dvec2& GetMousePos();
-	static const glm::dvec2& GetMouseDelta();
+	static glm::dvec2 GetMouseDelta();
 
 	static void SetCursorMode(CursorMode mode);
 

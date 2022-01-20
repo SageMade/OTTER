@@ -15,12 +15,12 @@ void RotatingBehaviour::RenderImGui() {
 
 nlohmann::json RotatingBehaviour::ToJson() const {
 	return {
-		{ "speed", GlmToJson(RotationSpeed) }
+		{ "speed", RotationSpeed }
 	};
 }
 
 RotatingBehaviour::Sptr RotatingBehaviour::FromJson(const nlohmann::json& data) {
 	RotatingBehaviour::Sptr result = std::make_shared<RotatingBehaviour>();
-	result->RotationSpeed = ParseJsonVec3(data["speed"]);
+	result->RotationSpeed = JsonGet(data, "speed", result->RotationSpeed);
 	return result;
 }

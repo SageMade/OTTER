@@ -17,7 +17,12 @@
 
 
 RenderLayer::RenderLayer() :
-	ApplicationLayer()
+	ApplicationLayer(),
+	_primaryFBO(nullptr),
+	_blitFbo(true),
+	_frameUniforms(nullptr),
+	_instanceUniforms(nullptr),
+	_clearColor({ 0.1f, 0.1f, 0.1f, 1.0f })
 {
 	Name = "Rendering";
 	Overrides = AppLayerFunctions::OnAppLoad | AppLayerFunctions::OnRender | AppLayerFunctions::OnWindowResize;
@@ -25,22 +30,19 @@ RenderLayer::RenderLayer() :
 
 RenderLayer::~RenderLayer() = default;
 
-void RenderLayer::OnRender()
+void RenderLayer::OnRender(const Framebuffer::Sptr& prevLayer)
 {
 	using namespace Gameplay;
 
 	Application& app = Application::Get();
 
-	const glm::uvec4& viewport = app.GetPrimaryViewport();
-	glViewport(viewport.x, viewport.y, viewport.z, viewport.w);
-	glScissor(viewport.x, viewport.y, viewport.z, viewport.w);
+	glViewport(0, 0, _primaryFBO->GetWidth(), _primaryFBO->GetHeight());
 
-	// Enable the scissor test;
-	glEnable(GL_SCISSOR_TEST);
-
+	// We bind our framebuffer so we can render to it
 	_primaryFBO->Bind();
 
 	// Clear the color and depth buffers
+	glClearColor(_clearColor.x, _clearColor.y, _clearColor.z, _clearColor.w);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	// Grab shorthands to the camera and shader from the scene
@@ -83,7 +85,7 @@ void RenderLayer::OnRender()
 	Material::Sptr defaultMat = app.CurrentScene()->DefaultMaterial;
 
 	// Render all our objects
-	ComponentManager::Each<RenderComponent>([&](const RenderComponent::Sptr& renderable) {
+	app.CurrentScene()->Components().Each<RenderComponent>([&](const RenderComponent::Sptr& renderable) {
 		// Early bail if mesh not set
 		if (renderable->GetMesh() == nullptr) {
 			return;
@@ -126,55 +128,22 @@ void RenderLayer::OnRender()
 	// Use our cubemap to draw our skybox
 	app.CurrentScene()->DrawSkybox();
 
-	// TODO: post-processing
-
-	// Disable culling
-	glDisable(GL_CULL_FACE);
-	// Disable depth testing, we're going to use order-dependant layering
-	glDisable(GL_DEPTH_TEST);
-	// Disable depth writing
-	glDepthMask(GL_FALSE);
-
-	// Enable alpha blending
-	glEnable(GL_BLEND);
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-
-	// Our projection matrix will be our entire window for now
-	glm::mat4 proj = glm::ortho(0.0f, (float)app.GetWindowSize().x, (float)app.GetWindowSize().y, 0.0f, -1.0f, 1.0f);
-	GuiBatcher::SetProjection(proj);
-
-	// Iterate over and render all the GUI objects
-	app.CurrentScene()->RenderGUI();
-
-	// Flush the Gui Batch renderer
-	GuiBatcher::Flush();
-
-	// Disable alpha blending
-	glDisable(GL_BLEND);
-	// Disable scissor testing
-	glDisable(GL_SCISSOR_TEST);
-	// Re-enable depth writing
-	glDepthMask(GL_TRUE);
+	// Unbind our primary framebuffer so subsequent draw calls do not modify it
+	//_primaryFBO->Unbind();
 
 	VertexArrayObject::Unbind();
-
-	_primaryFBO->Unbind();
-	Framebuffer::Blit(_primaryFBO, nullptr);
 }
 
 void RenderLayer::OnWindowResize(const glm::ivec2& oldSize, const glm::ivec2& newSize)
 {
+	if (newSize.x * newSize.y == 0) return;
+
 	// Set viewport and resize our primary FBO
-	glViewport(0, 0, newSize.x, newSize.y);
 	_primaryFBO->Resize(newSize);
 
 	// Update the main camera's projection
 	Application& app = Application::Get();
 	app.CurrentScene()->MainCamera->ResizeWindow(newSize.x, newSize.y);
-
-	// Notify our GUI batcher class of the new window size
-	GuiBatcher::SetWindowSize(newSize);
 }
 
 void RenderLayer::OnAppLoad(const nlohmann::json& config)
@@ -185,7 +154,6 @@ void RenderLayer::OnAppLoad(const nlohmann::json& config)
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_CULL_FACE);
 	glCullFace(GL_BACK);
-	glClearColor(0.2f, 0.2f, 0.2f, 1.0f);
 
 	// Create a new descriptor for our FBO
 	FramebufferDescriptor fboDescriptor;
@@ -204,4 +172,28 @@ void RenderLayer::OnAppLoad(const nlohmann::json& config)
 	// Create our common uniform buffers
 	_frameUniforms = std::make_shared<UniformBuffer<FrameLevelUniforms>>(BufferUsage::DynamicDraw);
 	_instanceUniforms = std::make_shared<UniformBuffer<InstanceLevelUniforms>>(BufferUsage::DynamicDraw);
+}
+
+const Framebuffer::Sptr& RenderLayer::GetPrimaryFBO() const {
+	return _primaryFBO;
+}
+
+bool RenderLayer::IsBlitEnabled() const {
+	return _blitFbo;
+}
+
+void RenderLayer::SetBlitEnabled(bool value) {
+	_blitFbo = value;
+}
+
+Framebuffer::Sptr RenderLayer::GetRenderOutput() {
+	return _primaryFBO;
+}
+
+const glm::vec4& RenderLayer::GetClearColor() const {
+	return _clearColor;
+}
+
+void RenderLayer::SetClearColor(const glm::vec4 & value) {
+	_clearColor = value;
 }

@@ -20,14 +20,14 @@ public :
 	/// </summary>
 	/// <param name="sizeInBytes">The size in bytes for the buffer</param>
 	/// <param name="usage">The buffer's usage hint, default DynamicDraw</param>
-	AbstractUniformBuffer(size_t sizeInBytes, BufferUsage usage = BufferUsage::DynamicDraw);
+	AbstractUniformBuffer(uint32_t sizeInBytes, BufferUsage usage = BufferUsage::DynamicDraw);
 	/// <summary>
 	/// Loads fresh data into this uniform buffer
 	/// </summary>
 	/// <param name="data">The data to load into the buffer</param>
 	/// <param name="elementSize">The size of a single element in bytes</param>
 	/// <param name="elementCount">The numbder of elements to upload</param>
-	virtual void LoadData(const void* data, size_t elementSize, size_t elementCount) override;
+	virtual void LoadData(const void* data, uint32_t elementSize, uint32_t elementCount) override;
 
 	/// <summary>
 	/// Uniform buffers behave a bit differently than other buffer types,
@@ -44,7 +44,7 @@ public :
 protected:
 	// Will contain the backing data store for the buffer
 	uint8_t* _rawData;
-	size_t   _size;
+	uint32_t _size;
 };
 
 /// <summary>

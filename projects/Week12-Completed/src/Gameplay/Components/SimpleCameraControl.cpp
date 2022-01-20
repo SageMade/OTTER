@@ -80,16 +80,16 @@ void SimpleCameraControl::RenderImGui()
 
 nlohmann::json SimpleCameraControl::ToJson() const {
 	return {
-		{ "mouse_sensitivity", GlmToJson(_mouseSensitivity) },
-		{ "move_speed", GlmToJson(_moveSpeeds) },
+		{ "mouse_sensitivity", _mouseSensitivity },
+		{ "move_speed", _moveSpeeds },
 		{ "shift_mult", _shiftMultipler }
 	};
 }
 
 SimpleCameraControl::Sptr SimpleCameraControl::FromJson(const nlohmann::json& blob) {
 	SimpleCameraControl::Sptr result = std::make_shared<SimpleCameraControl>();
-	result->_mouseSensitivity = ParseJsonVec2(blob["mouse_sensitivity"]);
-	result->_moveSpeeds       = ParseJsonVec3(blob["move_speed"]);
+	result->_mouseSensitivity = JsonGet(blob, "mouse_sensitivity", result->_mouseSensitivity);
+	result->_moveSpeeds       = JsonGet(blob, "move_speed", result->_moveSpeeds);
 	result->_shiftMultipler   = JsonGet(blob, "shift_mult", 2.0f);
 	return result;
 }
