@@ -5,8 +5,8 @@
 #include <memory>
 #include <EnumToString.h>
 
-#include "Graphics/VertexBuffer.h"
-#include "Graphics/IndexBuffer.h"
+#include "Graphics/Buffers/VertexBuffer.h"
+#include "Graphics/Buffers/IndexBuffer.h"
 #include "Graphics/GlEnums.h"
 #include "Graphics/IGraphicsResource.h"
 

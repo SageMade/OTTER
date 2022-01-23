@@ -8,7 +8,7 @@
 
 #include "Physics/BulletDebugDraw.h"
 
-#include "Graphics/UniformBuffer.h"
+#include "Graphics/Buffers/UniformBuffer.h"
 
 struct GLFWwindow;
 

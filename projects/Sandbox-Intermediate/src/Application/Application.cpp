@@ -13,8 +13,8 @@
 #include "Utils/ResourceManager/ResourceManager.h"
 
 // Graphics
-#include "Graphics/IndexBuffer.h"
-#include "Graphics/VertexBuffer.h"
+#include "Graphics/Buffers/IndexBuffer.h"
+#include "Graphics/Buffers/VertexBuffer.h"
 #include "Graphics/VertexArrayObject.h"
 #include "Graphics/ShaderProgram.h"
 #include "Graphics/Texture2D.h"

@@ -1,7 +1,7 @@
 #pragma once
 #include "../ApplicationLayer.h"
 #include "Graphics/Framebuffer.h"
-#include "Graphics/UniformBuffer.h"
+#include "Graphics/Buffers/UniformBuffer.h"
 
 class InterfaceLayer final : public ApplicationLayer {
 public:

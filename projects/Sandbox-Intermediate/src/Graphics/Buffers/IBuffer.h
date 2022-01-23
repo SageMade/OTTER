@@ -27,6 +27,13 @@ public:
 	/// <param name="elementCount">The number of elements to upload</param>
 	virtual void LoadData(const void* data, uint32_t elementSize, uint32_t elementCount);
 
+	/// <summary>
+	/// Updates data within the buffer, optionally resizing the buffer
+	/// </summary>
+	/// <param name="data">The data that you want to load into the buffer</param>
+	/// <param name="elementSize">The size of a single element, in bytes</param>
+	/// <param name="elementCount">The number of elements to upload</param>
+	/// <param name="allowResize">True if resizing the buffer is allowed, otherwise an assertion is thrown for oversized writes</param>
 	virtual void UpdateData(const void* data, uint32_t elementSize, uint32_t elementCount, bool allowResize = true);
 
 	/// <summary>
@@ -66,17 +73,21 @@ public:
 	/// </summary>
 	virtual void Bind() const;
 	/// <summary>
+	/// Binds this buffer for use to the slot returned by GetType()
+	/// </summary>
+	/// <param name="slot">The buffer slot to bind to, for the vast majority of cases this should be 0</param>
+	virtual void Bind(uint32_t slot) const;
+	/// <summary>
 	/// Unbinds the buffer bound to the slot given by type
 	/// </summary>
 	/// <param name="type">The type or slot of buffer to unbind (ex: GL_ARRAY_BUFFER, GL_ARRAY_ELEMENT_BUFFER)</param>
-	/// <param name="slot">The buffer slot to unbind, for the vast majority of cases this should be 0</param>
 	static void UnBind(BufferType type);
 	/// <summary>
 	/// Unbinds the indexed buffers bound to the slot given by type and slot
 	/// </summary>
 	/// <param name="type">The type or slot of buffer to unbind (ex: GL_UNIFORM_BUFFER)</param>
 	/// <param name="slot">The buffer slot to unbind</param>
-	static void UnBind(BufferType type, int slot);
+	static void UnBind(BufferType type, uint32_t slot);
 
 	// Inherited from IGraphicsResource
 	virtual GlResourceType GetResourceClass() const override;

@@ -1,6 +1,6 @@
 #include "VertexArrayObject.h"
-#include "IndexBuffer.h"
-#include "VertexBuffer.h"
+#include "Buffers/IndexBuffer.h"
+#include "Buffers/VertexBuffer.h"
 #include "Logging.h"
 
 VertexArrayObject::VertexArrayObject() :

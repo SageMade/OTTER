@@ -504,3 +504,8 @@ bool ShaderProgram::FindUniform(const std::string& name, UniformInfo* out) {
 GlResourceType ShaderProgram::GetResourceClass() const {
 	return GlResourceType::ShaderProgram;
 }
+
+void ShaderProgram::RegisterVaryings(const char* const* names, int numVaryings, bool interleaved /*= true*/)
+{
+	glTransformFeedbackVaryings(_rendererId, numVaryings, names, interleaved ? GL_INTERLEAVED_ATTRIBS : GL_SEPARATE_ATTRIBS);
+}

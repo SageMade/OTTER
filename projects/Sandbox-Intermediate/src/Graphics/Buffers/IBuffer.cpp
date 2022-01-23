@@ -63,10 +63,15 @@ void IBuffer::Bind() const {
 	glBindBuffer((GLenum)_type, _rendererId);
 }
 
+void IBuffer::Bind(uint32_t slot) const
+{
+	glBindBufferBase((GLenum)_type, slot, _rendererId);
+}
+
 void IBuffer::UnBind(BufferType type) {
 	glBindBuffer((GLenum)type, 0);
 }
 
-void IBuffer::UnBind(BufferType type, int slot) {
+void IBuffer::UnBind(BufferType type, uint32_t slot) {
 	glBindBufferBase((GLenum)type, slot, 0);
 }
