@@ -16,6 +16,8 @@ void ParticleLayer::OnUpdate()
 {
 	Application& app = Application::Get();
 
+	// Only update the particle systems when the game is playing, so we can edit them in
+	// the inspector
 	if (app.CurrentScene()->IsPlaying) {
 		app.CurrentScene()->Components().Each<ParticleSystem>([](const ParticleSystem::Sptr& system) {
 			if (system->IsEnabled) {

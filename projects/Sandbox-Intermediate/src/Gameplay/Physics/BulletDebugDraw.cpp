@@ -42,7 +42,7 @@ bool BulletDebugDraw::DrawModeGui(const char* label, BulletDebugMode& mode)
 	bool result = false;
 	ImGui::TextUnformatted(label); 
 	ImGui::SameLine();
-	if (ImGui::BeginCombo(label, (~mode).empty() ? "multiple" : (~mode).c_str())) {
+	if (ImGui::BeginCombo("", (~mode).empty() ? "multiple" : (~mode).c_str())) {
 
 		for (int ix = 0; ix <= 15; ix++) {
 			bool selected = (int)mode & (1 << ix);

@@ -234,7 +234,7 @@ void ImGuiDebugLayer::_RenderGameWindow()
 	ImGuiWindowFlags window_flags = 0;
 	window_flags |= ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoBackground;
 	window_flags |= ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoMove;
-	window_flags |= ImGuiWindowFlags_NoTitleBar;
+	window_flags |= ImGuiWindowFlags_NoTitleBar;   
 
 	// We need the application viewport so we can figure out where the game window is relative to it
 	ImGuiViewport* viewport = ImGui::GetMainViewport();
@@ -244,7 +244,17 @@ void ImGuiDebugLayer::_RenderGameWindow()
 
 	// Start the window, we can also let the app know whether it has focus by checking the ImGui window's focus
 	ImGui::Begin("Game View", nullptr, window_flags);
+	ImGui::PopStyleVar(3);
 	app.IsFocused = ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows);
+
+	if (ImGui::BeginPopupContextWindow()) {
+		BulletDebugMode physicsDrawMode = app.CurrentScene()->GetPhysicsDebugDrawMode();
+		if (BulletDebugDraw::DrawModeGui("Physics Debug Mode:", physicsDrawMode)) {
+			app.CurrentScene()->SetPhysicsDebugDrawMode(physicsDrawMode);
+		}
+
+		ImGui::EndPopup();
+	}
 
 	// Grab the current scene the application is displaying
 	Scene::Sptr scene = app.CurrentScene();
@@ -308,7 +318,6 @@ void ImGuiDebugLayer::_RenderGameWindow()
 	ImGui::End();
 
 	// Pop all the styling changes
-	ImGui::PopStyleVar(3);
 	ImGui::PopStyleColor();
 }
 

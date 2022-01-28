@@ -59,6 +59,10 @@ namespace Gameplay {
 		_bulletDebugDraw->setDebugMode((btIDebugDraw::DebugDrawModes)mode);
 	}
 
+	BulletDebugMode Scene::GetPhysicsDebugDrawMode() const {
+		return (BulletDebugMode)_bulletDebugDraw->getDebugMode();
+	}
+
 	void Scene::SetSkyboxShader(const std::shared_ptr<ShaderProgram>& shader) {
 		_skyboxShader = shader;
 	}

@@ -43,6 +43,7 @@ namespace Gameplay {
 			Guid ResourceGUID;
 			const Scene* SceneContext;
 			mutable std::weak_ptr<GameObject> Ptr;
+			mutable bool isNull;
 
 			friend class Scene;
 

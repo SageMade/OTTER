@@ -23,3 +23,4 @@ void main() {
     outLifetime = inLifetime;
     outMetadata = inMetadata;
 }
+

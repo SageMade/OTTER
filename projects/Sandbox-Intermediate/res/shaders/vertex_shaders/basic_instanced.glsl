@@ -4,10 +4,10 @@
 #include "../fragments/vs_common.glsl"
 
 // Attributes 0-5 are used by our common inputs, so let's skip to 8 to leave some space
-layout(location = 8) in mat4 inModelTransform;
 // This will consume 4 slots, since it's essentially 4 vec4s in memory
-layout(location = 12) in mat3 inNormalMatrix;
+layout(location = 8) in mat4 inModelTransform;
 // This will consume 3 slots in memory
+layout(location = 12) in mat3 inNormalMatrix;
 
 void main() {
 	// We take the hit of doing a matrix multiplication instead of using more bandwidth to send all the matrices

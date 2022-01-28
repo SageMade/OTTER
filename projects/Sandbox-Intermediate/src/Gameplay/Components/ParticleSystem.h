@@ -28,13 +28,13 @@ public:
 
 protected:
 	struct ParticleData {
-		ParticleType Type;
+		ParticleType Type;     // uint32_t, 0 for emitters, 1 for particles
 		glm::vec3    Position;
-		glm::vec3    Velocity;
+		glm::vec3    Velocity; // For emitters, this is initial velocity
 		glm::vec4    Color;
-		float        Lifetime;
+		float        Lifetime; // For emitters, this is the time to next particle spawn
 
-		// For emitters, x is time to next particle, y is max deviation from direction in radians, z is min lifetime, w is max lifetime
+		// For emitters, x is time to next particle, y is max deviation from direction in radians, z-w is lifetime range
 		glm::vec4    Metadata;
 	};
 

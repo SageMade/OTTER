@@ -41,9 +41,9 @@ void main() {
     switch (inType[0]) {
         // Handling emitters
         case TYPE_EMITTER:
-
+            int emitted = 1;
             // If the lifetime is at 0, we emit a particle
-            while (lifetime < 0) {
+            while ((lifetime < 0) && (emitted < 32)) {
                 out_Type = TYPE_PARTICLE;
                 out_Position = inPosition[0] + inVelocity[0] * (-lifetime);
                 out_Velocity = inVelocity[0];
@@ -55,6 +55,7 @@ void main() {
                 EndPrimitive();
 
                 lifetime += meta.x;
+                emitted++;
             }
 
             // Push the emitter back into the output stream
@@ -92,16 +93,6 @@ void main() {
             }
             break;
         default:
-            // Push the emitter back into the output stream
-            out_Type     = inType[0];
-            out_Position = inPosition[0];
-            out_Velocity = inVelocity[0];
-            out_Color    = inColor[0];
-            out_Lifetime = lifetime;
-            out_Metadata = inMetadata[0];
-            
-            EmitVertex();
-            EndPrimitive();
             break;
     }
 }

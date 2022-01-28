@@ -68,9 +68,6 @@ void ParticleSystem::Update()
 		delete[] data;
 	}
 
-	// Bind the update shader and send our relevant uniforms
-	_updateShader->Bind();
-	_updateShader->SetUniform("u_Gravity", _gravity); 
 
 	// Disable rasterization, this is update only
 	glEnable(GL_RASTERIZER_DISCARD);
@@ -96,6 +93,10 @@ void ParticleSystem::Update()
 	glVertexAttribPointer(3, 4, GL_FLOAT, GL_FALSE, sizeof(ParticleData), (const GLvoid*)offsetof(ParticleData, Color)); // color 
 	glVertexAttribPointer(4, 1, GL_FLOAT, GL_FALSE, sizeof(ParticleData), (const GLvoid*)offsetof(ParticleData, Lifetime)); // metadata 
 	glVertexAttribPointer(5, 4, GL_FLOAT, GL_FALSE, sizeof(ParticleData), (const GLvoid*)offsetof(ParticleData, Metadata)); // metadata 
+
+	// Bind the update shader and send our relevant uniforms
+	_updateShader->Bind();
+	_updateShader->SetUniform("u_Gravity", _gravity);
 
 	// Our particles are points that we're simulating
 	glBeginQuery(GL_TRANSFORM_FEEDBACK_PRIMITIVES_WRITTEN, _query);
@@ -147,8 +148,6 @@ void ParticleSystem::Update()
 void ParticleSystem::Render()
 {
 	if (_hasInit) {
-		Application& app = Application::Get();
-
 		_renderShader->Bind();
 
 		// Make sure no VAOs are bound
@@ -156,13 +155,6 @@ void ParticleSystem::Render()
 
 		// Bind the current feedback buffer as our drawing buffer
 		glBindBuffer(GL_ARRAY_BUFFER, _particleBuffers[_currentVertexBuffer]);
-
-		glDisableVertexAttribArray(0);
-		glDisableVertexAttribArray(1);
-		glDisableVertexAttribArray(2);
-		glDisableVertexAttribArray(3);
-		glDisableVertexAttribArray(4);
-		glDisableVertexAttribArray(5);
 
 		// Enable just position and color
 		glEnableVertexAttribArray(1);
@@ -256,11 +248,11 @@ void ParticleSystem::Awake()
 		"out_Color", 
 		"out_Lifetime",
 		"out_Metadata" 
-	};
+	}; 
 
 	_updateShader = ShaderProgram::Create();
 	_updateShader->LoadShaderPartFromFile("shaders/vertex_shaders/particles_sim_vs.glsl", ShaderPartType::Vertex);
-	_updateShader->LoadShaderPartFromFile("shaders/geometry_shaders/particle_sim_gs.glsl", ShaderPartType::Geometry);
+ 	_updateShader->LoadShaderPartFromFile("shaders/geometry_shaders/particle_sim_gs.glsl", ShaderPartType::Geometry);
 	_updateShader->RegisterVaryings(varyings, 6, true);
 	_updateShader->Link(); 
 

@@ -12,9 +12,7 @@ InstancedRenderingTestLayer::InstancedRenderingTestLayer()
 }
 
 InstancedRenderingTestLayer::~InstancedRenderingTestLayer()
-{
-
-}
+{ }
 
 void InstancedRenderingTestLayer::OnSceneLoad() {
 	Gameplay::Scene::Sptr scene = Application::Get().CurrentScene();
@@ -39,7 +37,7 @@ void InstancedRenderingTestLayer::OnSceneLoad() {
 		BufferAttribute(14, 3, AttributeType::Float, sizeof(InstanceInfo), 24 * sizeof(float), AttribUsage::User0),
 	};
 
-	// Load a file to get the base VAO, then add the isntanced buffers
+	// Load a file to get the base VAO, then add the instanced buffers
 	_vao = ObjLoader::LoadFromFile("monkey.obj");
 	_vao->AddVertexBuffer(_instanceBuffer, instancedParams, true);
 
