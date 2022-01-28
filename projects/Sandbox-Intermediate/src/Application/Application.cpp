@@ -11,6 +11,7 @@
 #include "Layers/GLAppLayer.h"
 #include "Utils/FileHelpers.h"
 #include "Utils/ResourceManager/ResourceManager.h"
+#include "Utils/ImGuiHelper.h"
 
 // Graphics
 #include "Graphics/Buffers/IndexBuffer.h"
@@ -38,18 +39,22 @@
 #include "Gameplay/Components/MaterialSwapBehaviour.h"
 #include "Gameplay/Components/TriggerVolumeEnterBehaviour.h"
 #include "Gameplay/Components/SimpleCameraControl.h"
+#include "Gameplay/Components/ParticleSystem.h"
 
 // GUI
 #include "Gameplay/Components/GUI/RectTransform.h"
 #include "Gameplay/Components/GUI/GuiPanel.h"
 #include "Gameplay/Components/GUI/GuiText.h"
+#include "Gameplay/Components/ComponentManager.h"
+
+// Layers
 #include "Layers/RenderLayer.h"
 #include "Layers/InterfaceLayer.h"
 #include "Layers/DefaultSceneLayer.h"
 #include "Layers/LogicUpdateLayer.h"
 #include "Layers/ImGuiDebugLayer.h"
-#include "Utils/ImGuiHelper.h"
-#include "Gameplay/Components/ComponentManager.h"
+#include "Layers/InstancedRenderingTestLayer.h"
+#include "Layers/ParticleLayer.h"
 
 Application* Application::_singleton = nullptr;
 std::string Application::_applicationName = "INFR-2350U - DEMO";
@@ -68,7 +73,7 @@ Application::Application() :
 	_renderOutput(nullptr)
 { }
 
-Application::~Application() = default;
+Application::~Application() = default; 
 
 Application& Application::Get() {
 	LOG_ASSERT(_singleton != nullptr, "Failed to get application! Get was called before the application was started!");
@@ -140,9 +145,11 @@ void Application::_Run()
 	// TODO: Register layers
 	_layers.push_back(std::make_shared<GLAppLayer>());
 	_layers.push_back(std::make_shared<DefaultSceneLayer>());
-	_layers.push_back(std::make_shared<RenderLayer>());
-	_layers.push_back(std::make_shared<InterfaceLayer>());
 	_layers.push_back(std::make_shared<LogicUpdateLayer>());
+	_layers.push_back(std::make_shared<RenderLayer>());
+	_layers.push_back(std::make_shared<ParticleLayer>());
+	_layers.push_back(std::make_shared<InstancedRenderingTestLayer>());
+	_layers.push_back(std::make_shared<InterfaceLayer>());
 
 	// If we're in editor mode, we add all the editor layers
 	if (_isEditor) {
@@ -258,6 +265,7 @@ void Application::_RegisterClasses()
 	ComponentManager::RegisterType<RectTransform>();
 	ComponentManager::RegisterType<GuiPanel>();
 	ComponentManager::RegisterType<GuiText>();
+	ComponentManager::RegisterType<ParticleSystem>();
 }
 
 void Application::_Load() {

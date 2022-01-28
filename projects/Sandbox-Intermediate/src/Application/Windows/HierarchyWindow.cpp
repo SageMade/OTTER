@@ -25,7 +25,7 @@ void HierarchyWindow::Render()
 
 		ImGui::EndPopup();
 	}
-		
+	
 	for (const auto& object : app.CurrentScene()->_objects) {
 		_RenderObjectNode(object);
 	}
@@ -33,6 +33,10 @@ void HierarchyWindow::Render()
 
 void HierarchyWindow::_RenderObjectNode(Gameplay::GameObject::Sptr object, int depth) {
 	using namespace Gameplay;
+
+	if (object->HideInHierarchy) {
+		return;
+	}
 
 	// If the parent exists and we're at depth 0, abort
 	if (object->GetParent() != nullptr && depth == 0) {

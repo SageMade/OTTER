@@ -43,8 +43,10 @@ void ResourceManager::SaveManifest(const std::string& path) {
 	for (auto& [type, map] : _resources) {
 		std::string typeName = StringTools::SanitizeClassName(type.name());
 		for (auto& [guid, res] : map) {
-			_manifest[typeName][guid.str()] = res->ToJson();
-			_manifest[typeName][guid.str()]["guid"] = res->GetGUID().str();
+			if (res != nullptr) {
+				_manifest[typeName][guid.str()] = res->ToJson();
+				_manifest[typeName][guid.str()]["guid"] = res->GetGUID().str();
+			}
 		}
 	}
 	FileHelpers::WriteContentsToFile(path, _manifest.dump(1,'\t'));

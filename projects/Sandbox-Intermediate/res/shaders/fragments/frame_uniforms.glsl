@@ -10,6 +10,8 @@ layout (std140, binding = 0) uniform b_FrameLevelUniforms {
     uniform vec4  u_CamPos;
     // The time in seconds since the start of the application
     uniform float u_Time;    
+    // The time in seconds since the last frame
+    uniform float u_DeltaTime;
 };
 
 // Stores uniforms that change every object/instance

@@ -25,6 +25,8 @@ void GLAppLayer::OnAppLoad(const nlohmann::json& config) {
 	glfwSetWindowSizeCallback(app._window, GlWindowResizedCallback);
 
 	LOG_ASSERT(gladLoadGLLoader((GLADloadproc)glfwGetProcAddress) != 0, "Failed to initialize glad");
+
+	glEnable(GL_PROGRAM_POINT_SIZE);
 }
 
 void GLAppLayer::OnAppUnload()

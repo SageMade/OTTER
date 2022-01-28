@@ -17,6 +17,7 @@ namespace Gameplay {
 	GameObject::GameObject() :
 		IResource(),
 		Name("Unknown"),
+		HideInHierarchy(false),
 		_components(std::vector<IComponent::Sptr>()),
 		_scene(nullptr),
 		_position(ZERO),
@@ -577,6 +578,10 @@ namespace Gameplay {
 
 	GameObject::WeakRef::operator GameObject::Sptr() const {
 		return Resolve();
+	}
+
+	GameObject::WeakRef::operator Guid() const {
+		return ResourceGUID;
 	}
 
 }

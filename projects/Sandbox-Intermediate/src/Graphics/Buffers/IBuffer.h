@@ -1,10 +1,26 @@
 #pragma once
 #include <glad/glad.h>
+#include <EnumToString.h>
 
 #include "Graphics/GlEnums.h"
 #include "Utils/Macros.h"
 
 #include "Graphics/IGraphicsResource.h"
+
+/// <summary>
+/// Flags for accessing buffers via buffer mapping
+/// </summary>
+/// <see>https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/glMapBufferRange.xhtml</see>
+ENUM_FLAGS(BufferMapMode, uint32_t,
+	Read             = GL_MAP_READ_BIT,
+	Write            = GL_MAP_WRITE_BIT,
+	Persistent       = GL_MAP_PERSISTENT_BIT,
+	Coherent         = GL_MAP_COHERENT_BIT,
+	InvalidateRange  = GL_MAP_INVALIDATE_RANGE_BIT,
+	InvalidateBuffer = GL_MAP_INVALIDATE_BUFFER_BIT,
+	FlushExplicit    = GL_MAP_FLUSH_EXPLICIT_BIT,
+	Unsynchronized   = GL_MAP_UNSYNCHRONIZED_BIT
+);
 
 /// <summary>
 /// This is our abstract base class for all our OpenGL buffer types
@@ -67,6 +83,19 @@ public:
 	/// Returns the usage hint for this buffer (ex GL_STATIC_DRAW, GL_DYNAMIC_DRAW)
 	/// </summary>
 	BufferUsage GetUsage() const { return _usage; }
+
+	/// <summary>
+	/// Maps the buffer's data to a pointer that the CPU can access. Note that unmap should be called
+	/// to allow the GPU to take over control of the memory again
+	/// </summary>
+	/// <see>https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/glMapBufferRange.xhtml</see>
+	/// <param name="mode">The mode, as a series of bit flags</param>
+	/// <returns>A pointer to the data in the buffer, or nullptr if an error occurs</returns>
+	void* Map(BufferMapMode mode);
+	/// <summary>
+	/// Unmaps the buffers, so that the GPU can take control of the memory
+	/// </summary>
+	void Unmap();
 
 	/// <summary>
 	/// Binds this buffer for use to the slot returned by GetType()

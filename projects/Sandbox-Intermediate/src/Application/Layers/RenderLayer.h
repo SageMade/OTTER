@@ -21,6 +21,8 @@ public:
 		glm::vec4 u_CameraPos;
 		// The time in seconds since the start of the application
 		float u_Time;
+		// The time in seconds since the previous frame
+		float u_DeltaTime;
 	};
 
 	// Structure for our instance-level uniforms, matches layout from

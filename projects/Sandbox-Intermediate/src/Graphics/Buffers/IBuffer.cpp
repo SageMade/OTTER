@@ -59,6 +59,14 @@ void IBuffer::UpdateData(const void* data, uint32_t elementSize, uint32_t elemen
 	}
 }
 
+void* IBuffer::Map(BufferMapMode mode) {
+	return glMapNamedBufferRange(_rendererId, 0, _size, *mode);
+}
+
+void IBuffer::Unmap() {
+	glUnmapNamedBuffer(_rendererId);
+}
+
 void IBuffer::Bind() const {
 	glBindBuffer((GLenum)_type, _rendererId);
 }

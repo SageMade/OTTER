@@ -102,9 +102,9 @@ bool ShaderProgram::LoadShaderPartFromFile(const char* path, ShaderPartType type
 }
 
 bool ShaderProgram::Link() {
-	LOG_ASSERT(_handles[ShaderPartType::Vertex] != 0 && _handles[ShaderPartType::Fragment] != 0, "Must attach both a vertex and fragment shader!");
 
 	LOG_TRACE("Starting shader link:");
+	
 	// Attach all our shaders
 	for (auto& [type, id] : _handles) {
 		if (id != 0) {

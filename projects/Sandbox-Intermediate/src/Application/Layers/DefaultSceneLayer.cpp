@@ -64,6 +64,7 @@
 #include "Gameplay/InputEngine.h"
 
 #include "Application/Application.h"
+#include "Gameplay/Components/ParticleSystem.h"
 
 DefaultSceneLayer::DefaultSceneLayer() :
 	ApplicationLayer()
@@ -276,16 +277,17 @@ void DefaultSceneLayer::_CreateScene()
 		sphere->GenerateMesh();
 
 		// Set up the scene's camera
-		GameObject::Sptr camera = scene->CreateGameObject("Main Camera");
+		GameObject::Sptr camera = scene->MainCamera->GetGameObject()->SelfRef();
 		{
-			camera->SetPostion(glm::vec3(5.0f));
+			camera->SetPostion({ -9, -6, 15 });
 			camera->LookAt(glm::vec3(0.0f));
 
 			camera->Add<SimpleCameraControl>();
 
-			Camera::Sptr cam = camera->Add<Camera>();
+			// This is now handled by scene itself!
+			//Camera::Sptr cam = camera->Add<Camera>();
 			// Make sure that the camera is set as the scene's main camera!
-			scene->MainCamera = cam;
+			//scene->MainCamera = cam;
 		}
 
 		// Set up all our sample objects
@@ -469,6 +471,7 @@ void DefaultSceneLayer::_CreateScene()
 		}
 
 		/////////////////////////// UI //////////////////////////////
+		/*
 		GameObject::Sptr canvas = scene->CreateGameObject("UI Canvas");
 		{
 			RectTransform::Sptr transform = canvas->Add<RectTransform>();
@@ -500,6 +503,13 @@ void DefaultSceneLayer::_CreateScene()
 			}
 
 			canvas->AddChild(subPanel);
+		}
+		*/
+
+		GameObject::Sptr particles = scene->CreateGameObject("Particles");
+		{
+			ParticleSystem::Sptr particleManager = particles->Add<ParticleSystem>();  
+			particleManager->AddEmitter(glm::vec3(0.0f), glm::vec3(0.0f, -1.0f, 10.0f), 10.0f, glm::vec4(0.0f, 1.0f, 0.0f, 1.0f)); 
 		}
 
 		GuiBatcher::SetDefaultTexture(ResourceManager::CreateAsset<Texture2D>("textures/ui-sprite.png"));
