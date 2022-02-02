@@ -14,8 +14,8 @@
 #include "Graphics/Buffers/VertexBuffer.h"
 #include "Graphics/VertexArrayObject.h"
 #include "Graphics/ShaderProgram.h"
-#include "Graphics/Texture2D.h"
-#include "Graphics/TextureCube.h"
+#include "Graphics/Textures/Texture2D.h"
+#include "Graphics/Textures/TextureCube.h"
 #include "Graphics/VertexTypes.h"
 #include "Graphics/Font.h"
 #include "Graphics/GuiBatcher.h"
@@ -65,6 +65,8 @@
 
 #include "Application/Application.h"
 #include "Gameplay/Components/ParticleSystem.h"
+#include "Graphics/Textures/Texture3D.h"
+#include "Graphics/Textures/Texture1D.h"
 
 DefaultSceneLayer::DefaultSceneLayer() :
 	ApplicationLayer()
@@ -97,48 +99,56 @@ void DefaultSceneLayer::_CreateScene()
 			{ ShaderPartType::Vertex, "shaders/vertex_shaders/basic.glsl" },
 			{ ShaderPartType::Fragment, "shaders/fragment_shaders/frag_environment_reflective.glsl" }
 		});
+		reflectiveShader->SetDebugName("Reflective");
 
 		// This shader handles our basic materials without reflections (cause they expensive)
 		ShaderProgram::Sptr basicShader = ResourceManager::CreateAsset<ShaderProgram>(std::unordered_map<ShaderPartType, std::string>{
 			{ ShaderPartType::Vertex, "shaders/vertex_shaders/basic.glsl" },
 			{ ShaderPartType::Fragment, "shaders/fragment_shaders/frag_blinn_phong_textured.glsl" }
 		});
+		basicShader->SetDebugName("Blinn-phong");
 
 		// This shader handles our basic materials without reflections (cause they expensive)
 		ShaderProgram::Sptr specShader = ResourceManager::CreateAsset<ShaderProgram>(std::unordered_map<ShaderPartType, std::string>{
 			{ ShaderPartType::Vertex, "shaders/vertex_shaders/basic.glsl" },
 			{ ShaderPartType::Fragment, "shaders/fragment_shaders/textured_specular.glsl" }
 		});
+		specShader->SetDebugName("Textured-Specular");
 
 		// This shader handles our foliage vertex shader example
 		ShaderProgram::Sptr foliageShader = ResourceManager::CreateAsset<ShaderProgram>(std::unordered_map<ShaderPartType, std::string>{
 			{ ShaderPartType::Vertex, "shaders/vertex_shaders/foliage.glsl" },
 			{ ShaderPartType::Fragment, "shaders/fragment_shaders/screendoor_transparency.glsl" }
 		});
+		foliageShader->SetDebugName("Foliage");
 
 		// This shader handles our cel shading example
 		ShaderProgram::Sptr toonShader = ResourceManager::CreateAsset<ShaderProgram>(std::unordered_map<ShaderPartType, std::string>{
 			{ ShaderPartType::Vertex, "shaders/vertex_shaders/basic.glsl" },
 			{ ShaderPartType::Fragment, "shaders/fragment_shaders/toon_shading.glsl" }
 		});
+		toonShader->SetDebugName("Toon Shader");
 
 		// This shader handles our displacement mapping example
 		ShaderProgram::Sptr displacementShader = ResourceManager::CreateAsset<ShaderProgram>(std::unordered_map<ShaderPartType, std::string>{
 			{ ShaderPartType::Vertex, "shaders/vertex_shaders/displacement_mapping.glsl" },
 			{ ShaderPartType::Fragment, "shaders/fragment_shaders/frag_tangentspace_normal_maps.glsl" }
 		});
+		displacementShader->SetDebugName("Displacement Mapping");
 
 		// This shader handles our tangent space normal mapping
 		ShaderProgram::Sptr tangentSpaceMapping = ResourceManager::CreateAsset<ShaderProgram>(std::unordered_map<ShaderPartType, std::string>{
 			{ ShaderPartType::Vertex, "shaders/vertex_shaders/basic.glsl" },
 			{ ShaderPartType::Fragment, "shaders/fragment_shaders/frag_tangentspace_normal_maps.glsl" }
 		});
+		tangentSpaceMapping->SetDebugName("Tangent Space Mapping");
 
 		// This shader handles our multitexturing example
 		ShaderProgram::Sptr multiTextureShader = ResourceManager::CreateAsset<ShaderProgram>(std::unordered_map<ShaderPartType, std::string>{
 			{ ShaderPartType::Vertex, "shaders/vertex_shaders/vert_multitextured.glsl" },
 			{ ShaderPartType::Fragment, "shaders/fragment_shaders/frag_multitextured.glsl" }
 		});
+		multiTextureShader->SetDebugName("Multitexturing");
 
 		// Load in the meshes
 		MeshResource::Sptr monkeyMesh = ResourceManager::CreateAsset<MeshResource>("Monkey.obj");
@@ -151,6 +161,12 @@ void DefaultSceneLayer::_CreateScene()
 		leafTex->SetMinFilter(MinFilter::Nearest);
 		leafTex->SetMagFilter(MagFilter::Nearest);
 
+		// Loading in a color lookup table
+		Texture3D::Sptr lut = ResourceManager::CreateAsset<Texture3D>("luts/cool.cube"); 
+
+		// Loading in a 1D LUT
+		Texture1D::Sptr toonLut = ResourceManager::CreateAsset<Texture1D>("luts/toon-1D.png"); 
+		toonLut->SetWrap(WrapMode::ClampToEdge);
 
 		// Here we'll load in the cubemap, as well as a special shader to handle drawing the skybox
 		TextureCube::Sptr testCubemap = ResourceManager::CreateAsset<TextureCube>("cubemaps/ocean/ocean.jpg");
@@ -167,6 +183,9 @@ void DefaultSceneLayer::_CreateScene()
 		scene->SetSkyboxShader(skyboxShader);
 		// Since the skybox I used was for Y-up, we need to rotate it 90 deg around the X-axis to convert it to z-up
 		scene->SetSkyboxRotation(glm::rotate(MAT4_IDENTITY, glm::half_pi<float>(), glm::vec3(1.0f, 0.0f, 0.0f)));
+
+		// Configure the color correction LUT
+		scene->SetColorLUT(lut);
 
 		// Create our materials
 		// This will be our box material, with no environment reflections
@@ -212,6 +231,7 @@ void DefaultSceneLayer::_CreateScene()
 		{
 			toonMaterial->Name = "Toon";
 			toonMaterial->Set("u_Material.Diffuse", boxTexture);
+			toonMaterial->Set("s_ToonTerm", toonLut);
 			toonMaterial->Set("u_Material.Shininess", 0.1f);
 			toonMaterial->Set("u_Material.Steps", 8);
 		}
@@ -333,22 +353,6 @@ void DefaultSceneLayer::_CreateScene()
 			monkey1->Add<TriggerVolumeEnterBehaviour>();
 		}
 
-		GameObject::Sptr monkey2 = scene->CreateGameObject("Complex Object");
-		{
-			// Set and rotation position in the scene
-			monkey2->SetPostion(glm::vec3(-1.5f, 0.0f, 1.0f));
-			monkey2->SetRotation(glm::vec3(90.0f, 0.0f, 0.0f));
-
-			// Add a render component
-			RenderComponent::Sptr renderer = monkey2->Add<RenderComponent>();
-			renderer->SetMesh(monkeyMesh);
-			renderer->SetMaterial(boxMaterial);
-
-			// This is an example of attaching a component and setting some parameters
-			RotatingBehaviour::Sptr behaviour = monkey2->Add<RotatingBehaviour>();
-			behaviour->RotationSpeed = glm::vec3(0.0f, 0.0f, -90.0f);
-		}
-
 		GameObject::Sptr demoBase = scene->CreateGameObject("Demo Parent");
 
 		// Box to showcase the specular material
@@ -453,11 +457,6 @@ void DefaultSceneLayer::_CreateScene()
 
 			demoBase->AddChild(normalMapBall);
 		}
-
-		// Kinematic rigid bodies are those controlled by some outside controller
-		// and ONLY collide with dynamic objects
-		RigidBody::Sptr physics = monkey2->Add<RigidBody>(RigidBodyType::Kinematic);
-		physics->AddCollider(ConvexMeshCollider::Create());
 
 		// Create a trigger volume for testing how we can detect collisions with objects!
 		GameObject::Sptr trigger = scene->CreateGameObject("Trigger");

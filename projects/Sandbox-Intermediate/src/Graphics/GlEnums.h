@@ -191,6 +191,7 @@ constexpr size_t GetTexelSize(PixelFormat format, PixelType type) {
 	return GetTexelComponentSize(type) * GetTexelComponentCount(format);
 }
 
+
 /*
 	* Represents the type of data used in a shader in a more useful format for us
 	* than what OpenGL provides to us

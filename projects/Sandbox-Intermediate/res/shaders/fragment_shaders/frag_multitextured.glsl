@@ -33,6 +33,7 @@ uniform Material u_Material;
 ////////////////////////////////////////////////////////////////
 
 #include "../fragments/multiple_point_lights.glsl"
+#include "../fragments/color_correction.glsl"
 
 const float LOG_MAX = 2.40823996531;
 
@@ -57,5 +58,5 @@ void main() {
 	// combine for the final result
 	vec3 result = lightAccumulation  * inColor * textureColor.rgb;
 
-	frag_color = vec4(result, textureColor.a);
+	frag_color = vec4(ColorCorrect(result), textureColor.a);
 }

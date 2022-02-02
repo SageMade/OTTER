@@ -1,6 +1,7 @@
 #include "Gameplay/Components/RenderComponent.h"
 
 #include "Utils/ResourceManager/ResourceManager.h"
+#include "Utils/ImGuiHelper.h"
 
 
 RenderComponent::RenderComponent(const Gameplay::MeshResource::Sptr& mesh, const Gameplay::Material::Sptr& material) :
@@ -56,4 +57,5 @@ void RenderComponent::RenderImGui() {
 	ImGui::Text("Source:    %s", (_mesh == nullptr || _mesh->Filename.empty()) ? "Generated" : _mesh->Filename.c_str());
 	ImGui::Separator();
 	ImGui::Text("Material:  %s", _material != nullptr ? _material->Name.c_str() : "NULL");
+	ImGuiHelper::ResourceDragTarget<Gameplay::Material>(_material);
 }

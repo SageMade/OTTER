@@ -25,6 +25,16 @@ void StringTools::ToUpper(std::string& s) {
 	});
 }
 
+bool StringTools::EndsWith(const std::string& value, const std::string& token)
+{
+	if (value.length() >= token.length()) {
+		return (0 == value.compare(value.length() - token.length(), token.length(), token));
+	}
+	else {
+		return false;
+	}
+}
+
 std::vector<std::string> StringTools::Split(const std::string& s, const std::string& splitOn) {
 	std::vector<std::string> result;
 	Split(s, result, splitOn);

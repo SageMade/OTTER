@@ -1,13 +1,17 @@
 #include "ImGuiDebugLayer.h"
 #include "../Application.h"
 #include "Utils/ImGuiHelper.h"
-#include "../Windows/HierarchyWindow.h"
-#include "../Windows/InspectorWindow.h"
 #include "imgui_internal.h"
 #include "Gameplay/Scene.h"
 #include "../Timing.h"
 #include "Utils/Windows/FileDialogs.h"
 #include <filesystem>
+#include "RenderLayer.h"
+#include "../Windows/HierarchyWindow.h"
+#include "../Windows/InspectorWindow.h"
+#include "../Windows/MaterialsWindow.h"
+#include "../Windows/TextureWindow.h"
+#include "../Windows/DebugWindow.h"
 
 ImGuiDebugLayer::ImGuiDebugLayer() :
 	ApplicationLayer(),
@@ -26,6 +30,9 @@ void ImGuiDebugLayer::OnAppLoad(const nlohmann::json& config)
 	// Register our windows
 	RegisterWindow<HierarchyWindow>();
 	RegisterWindow<InspectorWindow>();
+	RegisterWindow<MaterialsWindow>();
+	RegisterWindow<TextureWindow>();
+	RegisterWindow<DebugWindow>();
 }
 
 void ImGuiDebugLayer::OnAppUnload()
@@ -92,7 +99,7 @@ void ImGuiDebugLayer::OnRender(const Framebuffer::Sptr& prevLayer)
 			// Iterate over all the windows
 			for (const auto& window : _windows) {
 				// If the window is a child of the root node and is open
-				if (window->ParentName.empty() && window->Open) {
+				if (window->ParentName.empty() && window->Open && window->SplitDirection != ImGuiDir_None) {
 					// Split the main window depending on the window's direction and depth, store ID in window
 					ImGuiID dockId = ImGui::DockBuilderSplitNode(dock_main_id, window->SplitDirection, window->SplitDepth, nullptr, &dock_main_id);
 					window->DockId = dockId;
@@ -110,21 +117,24 @@ void ImGuiDebugLayer::OnRender(const Framebuffer::Sptr& prevLayer)
 					float    dist = window->SplitDepth;
 					ImGuiID& parentDock = _FindOpenParentWindow(window, dock_main_id, &direction, &dist);
 					
-					// Split the parent node, store the ID in the window
-					ImGuiID dockId = ImGui::DockBuilderSplitNode(parentDock, direction, dist, nullptr, &parentDock);
-					window->DockId = dockId;
+					if (direction != ImGuiDir_None) {
+						// Split the parent node, store the ID in the window
+						ImGuiID dockId = ImGui::DockBuilderSplitNode(parentDock, direction, dist, nullptr, &parentDock);
+						window->DockId = dockId;
+					}
 				}
 			}
 
 			// Iterate over all windows yet again and add all open windows to the dock window
 			for (const auto& window : _windows) {
-				if (window->Open) {
+				if (window->Open && window->SplitDirection != ImGuiDir_None) {
 					ImGui::DockBuilderDockWindow(window->Name.c_str(), window->DockId);
 				}
 			}
 
 			// Add a specialized node for our game view
 			ImGui::DockBuilderDockWindow("Game View", dock_main_id);
+			ImGui::DockBuilderGetNode(dock_main_id)->LocalFlags |= ImGuiDockNodeFlags_NoTabBar;
 
 			// We're done building docking nodes!
 			ImGui::DockBuilderFinish(dock_main_id);
@@ -164,7 +174,17 @@ void ImGuiDebugLayer::OnRender(const Framebuffer::Sptr& prevLayer)
 						ResourceManager::SaveManifest(newFilename);
 					}
 				}
+
 				ImGui::EndMenu();
+			}
+
+			for (const auto& window : _windows) {
+				if (*(window->Requirements & EditorWindowRequirements::Menubar)) {
+					if (ImGui::BeginMenu(window->Name.c_str())) {
+						window->RenderMenuBar();
+						ImGui::EndMenu();
+					}
+				}
 			}
 
 			// Windows menu
@@ -174,7 +194,9 @@ void ImGuiDebugLayer::OnRender(const Framebuffer::Sptr& prevLayer)
 
 				// Render checkbox items for all the windows we have (to open and close them)
 				for (const auto& window : _windows) {
-					ImGui::MenuItem(window->Name.c_str(), nullptr, &window->Open);
+					if (*(window->Requirements & EditorWindowRequirements::Window)) {
+						ImGui::MenuItem(window->Name.c_str(), nullptr, &window->Open);
+					}
 				}
 				ImGui::PopItemFlag();
 				ImGui::EndMenu();
@@ -192,25 +214,27 @@ void ImGuiDebugLayer::OnRender(const Framebuffer::Sptr& prevLayer)
 
 	// Iterate over all the windows
 	for (const auto& window : _windows) {
-		// Track whether the window was previously open, only render open windows
-		bool wasOpen = window->Open;
-		if (window->Open) {
-			bool open = ImGui::Begin(window->Name.c_str(), &window->Open);
+		if (*(window->Requirements & EditorWindowRequirements::Window)) {
+			// Track whether the window was previously open, only render open windows
+			bool wasOpen = window->Open;
+			if (window->Open) {
+				bool open = ImGui::Begin(window->Name.c_str(), &window->Open);
 
-			// If the window was open or closed, mark our dock node as invalid
-			if (open != wasOpen) {
-				_dockInvalid = true;
-			}
+				// If the window was open or closed, mark our dock node as invalid
+				if (open != wasOpen) {
+					_dockInvalid = true;
+				}
 
-			// If window is closed, early bail and move to next window
-			if (!open) {
+				// If window is closed, early bail and move to next window
+				if (!open) {
+					ImGui::End();
+					continue;
+				}
+
+				// Otherwise render the window
+				window->Render();
 				ImGui::End();
-				continue;
 			}
-
-			// Otherwise render the window
-			window->Render();
-			ImGui::End();
 		}
 	}
 
@@ -234,7 +258,7 @@ void ImGuiDebugLayer::_RenderGameWindow()
 	ImGuiWindowFlags window_flags = 0;
 	window_flags |= ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoBackground;
 	window_flags |= ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoMove;
-	window_flags |= ImGuiWindowFlags_NoTitleBar;   
+	window_flags |= ImGuiWindowFlags_NoTitleBar;
 
 	// We need the application viewport so we can figure out where the game window is relative to it
 	ImGuiViewport* viewport = ImGui::GetMainViewport();
@@ -246,15 +270,6 @@ void ImGuiDebugLayer::_RenderGameWindow()
 	ImGui::Begin("Game View", nullptr, window_flags);
 	ImGui::PopStyleVar(3);
 	app.IsFocused = ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows);
-
-	if (ImGui::BeginPopupContextWindow()) {
-		BulletDebugMode physicsDrawMode = app.CurrentScene()->GetPhysicsDebugDrawMode();
-		if (BulletDebugDraw::DrawModeGui("Physics Debug Mode:", physicsDrawMode)) {
-			app.CurrentScene()->SetPhysicsDebugDrawMode(physicsDrawMode);
-		}
-
-		ImGui::EndPopup();
-	}
 
 	// Grab the current scene the application is displaying
 	Scene::Sptr scene = app.CurrentScene();

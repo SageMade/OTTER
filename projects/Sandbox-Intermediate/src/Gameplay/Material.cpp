@@ -1,18 +1,21 @@
 #include "Gameplay/Material.h"
 #include "Utils/ResourceManager/ResourceManager.h"
 #include "Utils/JsonGlmHelpers.h"
-#include "Graphics/TextureCube.h"
-#include "Graphics/Texture2D.h"
+#include "Graphics/Textures/TextureCube.h"
+#include "Graphics/Textures/Texture2D.h"
 #include "Logging.h"
 #include "Utils/ImGuiHelper.h"
+#include "Graphics/Textures/Texture1D.h"
+#include "Graphics/Textures/Texture3D.h"
 
 namespace Gameplay {
-
 	Material::Material(const ShaderProgram::Sptr& shader) :
 		IResource(),
 		_shader(shader),
 		_uniforms(std::unordered_map<std::string, UniformData>())
-	{ }
+	{
+		_PopulateUniforms();
+	}
 
 	Material::Material() :
 		IResource(),
@@ -60,7 +63,7 @@ namespace Gameplay {
 	void Material::Apply() {
 		if (_shader != nullptr) {
 			// Skip the reserved # of texture slots
-			int textureSlot = RESERVED_TEXTURE_SLOTS;
+			int textureSlot = 0;
 			
 			// Iterate over the uniforms map
 			for (auto&[name, data] : _uniforms) {
@@ -70,15 +73,21 @@ namespace Gameplay {
 
 				// If the uniform is a texture, we try and bind it, then move to the next slot
 				if (typeCode == ShaderDataTypecode::Texture) {
-					ITexture::Sptr texture = data.TextureAsset;
-					if (texture != nullptr) {
-						texture->Bind(textureSlot);
-					} else {
-						ITexture::Unbind(textureSlot);
+					if (textureSlot >= MAX_TEXTURE_SLOTS) {
+						LOG_WARN("Ignoring material binding, exceeds allowed number of textures");
 					}
-					// Send the slot to the shader
-					_shader->SetUniform(data.Location, data.Type, &textureSlot);
-					textureSlot++;
+					else {
+						ITexture::Sptr texture = data.TextureAsset;
+						if (texture != nullptr) {
+							texture->Bind(textureSlot);
+						}
+						else {
+							ITexture::Unbind(textureSlot);
+						}
+						// Send the slot to the shader
+						_shader->SetUniform(data.Location, data.Type, &textureSlot);
+						textureSlot++;
+					}
 				}
 				// The uniform is a plain ol' value type, send it in
 				else {
@@ -91,7 +100,12 @@ namespace Gameplay {
 	void Material::RenderImGui() {
 		ImGui::PushID(this);
 
-		if (ImGui::CollapsingHeader(Name.c_str())) {
+		bool open = ImGui::CollapsingHeader(Name.c_str());
+
+		ImGuiHelper::ResourceDragSource(this, Name);
+
+		if (open) {
+			ImGui::Text("Shader: %s", _shader != nullptr ? _shader->GetDebugName().c_str() : "null");
 			// Draw all of our valid uniforms
 			for (auto&[key, value] : _uniforms) {
 				if (value.Location != -2 && value.Location != -1) {
@@ -118,6 +132,7 @@ namespace Gameplay {
 		result->OverrideGUID(Guid(data["guid"]));
 		result->Name = data["name"].get<std::string>();
 		result->_shader = ResourceManager::Get<ShaderProgram>(Guid(data["shader"]));
+		result->_PopulateUniforms();
 
 		// material specific parameters'
 		if (data.contains("parameters") && data["parameters"].is_object()) {
@@ -157,7 +172,13 @@ namespace Gameplay {
 		if (data.Location == -2) {
 			ShaderProgram::UniformInfo uniform;
 			if (_shader->FindUniform(name, &uniform)) {
-				data = UniformData(name, _shader);
+				// Ignoring our reserved textures
+				if (GetShaderDataTypeCode(uniform.Type) == ShaderDataTypecode::Texture && uniform.Binding >= MAX_TEXTURE_SLOTS) {
+					data.Location = -1;
+				}
+				else {
+					data = UniformData(name, _shader);
+				}
 			} else {
 				data.Location = -1;
 			}
@@ -165,8 +186,18 @@ namespace Gameplay {
 		return data;
 	}
 
-	void Material::UniformData::RenderImGui() {
+	void Material::_PopulateUniforms()
+	{
+		const auto& uniforms = _shader->GetUniforms();
+		for (const auto& [key, value] : uniforms) {
+			_uniforms[key] = _GetUniform(key);
+		}
+	}
+
+	bool Material::UniformData::RenderImGui() {
 		ImGui::PushID(Name.c_str());
+
+		bool modified = false;
 
 		// Will store names for fields
 		static char buffer[256];
@@ -186,6 +217,7 @@ namespace Gameplay {
 			ImGui::Text(buffer);
 			ImGui::Indent();
 		} 
+
 
 		// Iterate over all elements in the array (or loop once if not an array)
 		for (int ix = 0; ix < ArraySize; ix++) {
@@ -220,7 +252,7 @@ namespace Gameplay {
 				case ShaderDataTypecode::Bool:
 					for (int e = 0; e < numElements; e++) {
 						ImGui::PushID(e);
-						ImGui::Checkbox("", ((bool*)elem) + e);
+						modified |= ImGui::Checkbox("", ((bool*)elem) + e);
 						if (e < numElements - 1) { ImGui::SameLine(); }
 						ImGui::PopID();
 					}
@@ -228,7 +260,7 @@ namespace Gameplay {
 				case ShaderDataTypecode::Float:
 					for (int e = 0; e < numElements; e++) {
 						ImGui::PushID(e);
-						ImGui::DragFloat("", ((float*)elem) + e, 0.1f);
+						modified |= ImGui::DragFloat("", ((float*)elem) + e, 0.1f);
 						if (e < numElements - 1) { ImGui::SameLine(); }
 						ImGui::PopID();
 					}
@@ -236,7 +268,7 @@ namespace Gameplay {
 				case ShaderDataTypecode::Double:
 					for (int e = 0; e < numElements; e++) {
 						ImGui::PushID(e);
-						ImGui::DragScalar("", ImGuiDataType_Double, ((double*)elem) + e, 0.1f);
+						modified |= ImGui::DragScalar("", ImGuiDataType_Double, ((double*)elem) + e, 0.1f);
 						if (e < numElements - 1) { ImGui::SameLine(); }
 						ImGui::PopID();
 					}
@@ -244,7 +276,7 @@ namespace Gameplay {
 				case ShaderDataTypecode::Int:
 					for (int e = 0; e < numElements; e++) {
 						ImGui::PushID(e);
-						ImGui::DragScalar("", ImGuiDataType_S32, ((int*)elem) + e, 0.1f);
+						modified |= ImGui::DragScalar("", ImGuiDataType_S32, ((int*)elem) + e, 0.1f);
 						if (e < numElements - 1) { ImGui::SameLine(); }
 						ImGui::PopID();
 					}
@@ -252,11 +284,81 @@ namespace Gameplay {
 				case ShaderDataTypecode::Uint:
 					for (int e = 0; e < numElements; e++) {
 						ImGui::PushID(e);
-						ImGui::DragScalar("", ImGuiDataType_U32, ((int*)elem) + e, 0.1f);
+						modified |= ImGui::DragScalar("", ImGuiDataType_U32, ((int*)elem) + e, 0.1f);
 						if (e < numElements - 1) { ImGui::SameLine(); }
 						ImGui::PopID();
 					}
 					break;
+				case ShaderDataTypecode::Texture:
+				{
+					switch (Type)
+					{
+						break;
+					case ShaderDataType::Tex2D:
+					case ShaderDataType::Tex2D_Multisample:
+					case ShaderDataType::Tex2D_Int:
+					case ShaderDataType::Tex2D_Uint: 
+					{
+						Texture2D::Sptr tex = std::dynamic_pointer_cast<Texture2D>(TextureAsset);
+						if (tex != nullptr) {
+							ImGui::Image((ImTextureID)tex->GetHandle(), ImVec2(ImGui::GetTextLineHeight() * 2, ImGui::GetTextLineHeight() * 2));
+							if (ImGuiHelper::ResourceDragTarget<Texture2D>(tex)) {
+								TextureAsset = tex;
+							}
+						}
+					}
+						break;
+						break;
+					case ShaderDataType::Tex3D:
+						break;
+					case ShaderDataType::TexCube:
+						break;
+					case ShaderDataType::TexCubeShadow:
+						break;
+					case ShaderDataType::Tex1D_Int:
+						break;
+					case ShaderDataType::Tex1D_Int_Array:
+						break;
+						break;
+					case ShaderDataType::Tex2D_Int_Rect:
+						break;
+					case ShaderDataType::Tex2D_Int_Array:
+						break;
+					case ShaderDataType::Tex2D_Int_Multisample:
+						break;
+					case ShaderDataType::Tex2D_Int_MultisampleArray:
+						break;
+					case ShaderDataType::Tex3D_Int:
+						break;
+					case ShaderDataType::TexCube_Int:
+						break;
+					case ShaderDataType::Tex1D_Uint:
+						break;
+					case ShaderDataType::Tex2D_Uint_Rect:
+						break;
+					case ShaderDataType::Tex1D_Uint_Array:
+						break;
+						break;
+					case ShaderDataType::Tex2D_Uint_Array:
+						break;
+					case ShaderDataType::Tex2D_Uint_Multisample:
+						break;
+					case ShaderDataType::Tex2D_Uint_MultisampleArray:
+						break;
+					case ShaderDataType::Tex3D_Uint:
+						break;
+					case ShaderDataType::TexCube_Uint:
+						break;
+					case ShaderDataType::BufferTexture:
+						break;
+					case ShaderDataType::BufferTextureInt:
+						break;
+					case ShaderDataType::BufferTextureUint:
+						break;
+					default:
+						break;
+					}
+				}
 				default:
 					break;
 			}
@@ -272,6 +374,8 @@ namespace Gameplay {
 			ImGui::Unindent();
 		}
 		ImGui::PopID();
+
+		return modified;
 	}
 
 	////////////////////////////////////////////////////////////////
@@ -304,6 +408,7 @@ namespace Gameplay {
 			Location = uniform.Location;
 			Type = uniform.Type;
 			ArraySize = uniform.ArraySize;
+			BindingSlot = uniform.Binding;
 			
 			// Allocate memory for array if the uniform is an array
 			if (ArraySize > 1) {
@@ -672,6 +777,15 @@ namespace Gameplay {
 				result.TextureAsset = ResourceManager::Get<TextureCube>(Guid(blob["value"].get<std::string>()));
 				break;
 			case ShaderDataType::Tex1D:
+			case ShaderDataType::Tex1D_Int:
+			case ShaderDataType::Tex1D_Uint:
+				result.TextureAsset = ResourceManager::Get<Texture1D>(Guid(blob["value"].get<std::string>()));
+				break;
+			case ShaderDataType::Tex3D:
+			case ShaderDataType::Tex3D_Int:
+			case ShaderDataType::Tex3D_Uint:
+				result.TextureAsset = ResourceManager::Get<Texture3D>(Guid(blob["value"].get<std::string>()));
+				break;
 			case ShaderDataType::Tex1D_Array:
 			case ShaderDataType::Tex1D_Shadow:
 			case ShaderDataType::Tex1D_ShadowArray:
@@ -681,20 +795,15 @@ namespace Gameplay {
 			case ShaderDataType::Tex2D_Shadow:
 			case ShaderDataType::Tex2D_ShadowArray:
 			case ShaderDataType::Tex2D_MultisampleArray:
-			case ShaderDataType::Tex3D:
 			case ShaderDataType::TexCubeShadow:
-			case ShaderDataType::Tex1D_Int:
 			case ShaderDataType::Tex1D_Int_Array:
 			case ShaderDataType::Tex2D_Int_Rect:
 			case ShaderDataType::Tex2D_Int_Array:
 			case ShaderDataType::Tex2D_Int_MultisampleArray:
-			case ShaderDataType::Tex3D_Int:
-			case ShaderDataType::Tex1D_Uint:
 			case ShaderDataType::Tex2D_Uint_Rect:
 			case ShaderDataType::Tex1D_Uint_Array:
 			case ShaderDataType::Tex2D_Uint_Array:
 			case ShaderDataType::Tex2D_Uint_MultisampleArray:
-			case ShaderDataType::Tex3D_Uint:
 			case ShaderDataType::BufferTexture:
 			case ShaderDataType::BufferTextureInt:
 			case ShaderDataType::BufferTextureUint:
@@ -705,5 +814,4 @@ namespace Gameplay {
 		
 		return result;
 	}
-
 }

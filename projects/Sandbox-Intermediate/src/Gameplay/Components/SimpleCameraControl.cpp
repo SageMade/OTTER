@@ -8,6 +8,7 @@
 #include "Utils/JsonGlmHelpers.h"
 #include "Utils/ImGuiHelper.h"
 #include "Gameplay/InputEngine.h"
+#include "Application/Application.h"
 
 SimpleCameraControl::SimpleCameraControl() :
 	IComponent(),
@@ -22,53 +23,56 @@ SimpleCameraControl::~SimpleCameraControl() = default;
 
 void SimpleCameraControl::Update(float deltaTime)
 {
-	if (InputEngine::GetMouseState(GLFW_MOUSE_BUTTON_LEFT) == ButtonState::Pressed) {
-		_prevMousePos = InputEngine::GetMousePos();
-		LOG_INFO("doot");
+	if (Application::Get().IsFocused) {
+		if (InputEngine::GetMouseState(GLFW_MOUSE_BUTTON_LEFT) == ButtonState::Pressed) {
+			_prevMousePos = InputEngine::GetMousePos();
+			LOG_INFO("doot");
+		}
+
+		if (InputEngine::IsMouseButtonDown(GLFW_MOUSE_BUTTON_LEFT)) {
+			glm::dvec2 currentMousePos = InputEngine::GetMousePos();
+			glm::dvec2 delta = currentMousePos - _prevMousePos;
+
+			_currentRot.x += static_cast<float>(delta.x) * _mouseSensitivity.x;
+			_currentRot.y += static_cast<float>(delta.y) * _mouseSensitivity.y;
+			glm::quat rotX = glm::angleAxis(glm::radians(_currentRot.x), glm::vec3(0, 0, 1));
+			glm::quat rotY = glm::angleAxis(glm::radians(_currentRot.y), glm::vec3(1, 0, 0));
+			glm::quat currentRot = rotX * rotY;
+			GetGameObject()->SetRotation(currentRot);
+
+			_prevMousePos = currentMousePos;
+
+			glm::vec3 input = glm::vec3(0.0f);
+			if (InputEngine::IsKeyDown(GLFW_KEY_W)) {
+				input.z -= _moveSpeeds.x;
+			}
+			if (InputEngine::IsKeyDown(GLFW_KEY_S)) {
+				input.z += _moveSpeeds.x;
+			}
+			if (InputEngine::IsKeyDown(GLFW_KEY_A)) {
+				input.x -= _moveSpeeds.y;
+			}
+			if (InputEngine::IsKeyDown(GLFW_KEY_D)) {
+				input.x += _moveSpeeds.y;
+			}
+			if (InputEngine::IsKeyDown(GLFW_KEY_LEFT_CONTROL)) {
+				input.y -= _moveSpeeds.z;
+			}
+			if (InputEngine::IsKeyDown(GLFW_KEY_SPACE)) {
+				input.y += _moveSpeeds.z;
+			}
+
+			if (InputEngine::IsKeyDown(GLFW_KEY_LEFT_SHIFT)) {
+				input *= _shiftMultipler;
+			}
+
+			input *= deltaTime;
+
+			glm::vec3 worldMovement = currentRot * glm::vec4(input, 1.0f);
+			GetGameObject()->SetPostion(GetGameObject()->GetPosition() + worldMovement);
+		}
 	}
-
-	if (InputEngine::IsMouseButtonDown(GLFW_MOUSE_BUTTON_LEFT)) {
-		glm::dvec2 currentMousePos = InputEngine::GetMousePos();
-		glm::dvec2 delta = currentMousePos - _prevMousePos;
-
-		_currentRot.x += static_cast<float>(delta.x) * _mouseSensitivity.x;
-		_currentRot.y += static_cast<float>(delta.y) * _mouseSensitivity.y;
-		glm::quat rotX = glm::angleAxis(glm::radians(_currentRot.x), glm::vec3(0, 0, 1));
-		glm::quat rotY = glm::angleAxis(glm::radians(_currentRot.y), glm::vec3(1, 0, 0));
-		glm::quat currentRot = rotX * rotY;
-		GetGameObject()->SetRotation(currentRot);
-
-		_prevMousePos = currentMousePos;
-
-		glm::vec3 input = glm::vec3(0.0f);
-		if (InputEngine::IsKeyDown(GLFW_KEY_W)) {
-			input.z -= _moveSpeeds.x;
-		}
-		if (InputEngine::IsKeyDown(GLFW_KEY_S)) {
-			input.z += _moveSpeeds.x;
-		}
-		if (InputEngine::IsKeyDown(GLFW_KEY_A)) {
-			input.x -= _moveSpeeds.y;
-		}
-		if (InputEngine::IsKeyDown(GLFW_KEY_D)) {
-			input.x += _moveSpeeds.y;
-		}
-		if (InputEngine::IsKeyDown(GLFW_KEY_LEFT_CONTROL)) {
-			input.y -= _moveSpeeds.z;
-		}
-		if (InputEngine::IsKeyDown(GLFW_KEY_SPACE)) {
-			input.y += _moveSpeeds.z;
-		}
-		
-		if (InputEngine::IsKeyDown(GLFW_KEY_LEFT_SHIFT)) {
-			input *= _shiftMultipler;
-		}
-
-		input *= deltaTime;
-
-		glm::vec3 worldMovement = currentRot * glm::vec4(input, 1.0f);
-		GetGameObject()->SetPostion(GetGameObject()->GetPosition() + worldMovement);
-	}
+	_prevMousePos = InputEngine::GetMousePos();
 }
 
 void SimpleCameraControl::RenderImGui()

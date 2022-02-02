@@ -30,12 +30,14 @@ public:
 		ShaderDataType Type;
 		int            ArraySize;
 		int            Location;
+		int            Binding;
 		std::string    Name;
 
 		UniformInfo() :
 			Type(ShaderDataType::None),
 			ArraySize(0),
 			Location(-1),
+			Binding(-1),
 			Name("") {}
 	};
 
@@ -104,6 +106,8 @@ public:
 	/// Unbinds all shader programs
 	/// </summary>
 	static void Unbind();
+
+	const std::unordered_map<std::string, UniformInfo>& GetUniforms() const { return _uniforms; }
 
 	// Inherited from IGraphicsResource
 

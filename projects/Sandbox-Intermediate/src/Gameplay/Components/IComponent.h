@@ -2,6 +2,8 @@
 #include <memory>
 #include "json.hpp"
 #include <imgui.h>
+#include <GLM/glm.hpp>
+
 #include "Utils/StringUtils.h"
 #include "Utils/ResourceManager/ResourceManager.h"
 #include "Utils/ResourceManager/IResource.h"

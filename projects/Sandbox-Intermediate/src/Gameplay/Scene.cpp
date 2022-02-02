@@ -10,9 +10,10 @@
 #include "Gameplay/Physics/RigidBody.h"
 #include "Gameplay/Physics/TriggerVolume.h"
 #include "Gameplay/MeshResource.h"
+#include "Gameplay/Material.h"
 
 #include "Graphics/DebugDraw.h"
-#include "Graphics/TextureCube.h"
+#include "Graphics/Textures/TextureCube.h"
 #include "Graphics/VertexArrayObject.h"
 #include "Application/Application.h"
 
@@ -87,6 +88,14 @@ namespace Gameplay {
 
 	const glm::mat3& Scene::GetSkyboxRotation() const {
 		return _skyboxRotation;
+	}
+
+	void Scene::SetColorLUT(const Texture3D::Sptr& texture) {
+		_colorCorrection = texture;
+	}
+
+	const Texture3D::Sptr& Scene::GetColorLUT() const {
+		return _colorCorrection;
 	}
 
 	GameObject::Sptr Scene::CreateGameObject(const std::string& name)
@@ -416,10 +425,10 @@ namespace Gameplay {
 			
 			glDepthMask(false);
 			glDisable(GL_CULL_FACE);
-			glDepthFunc(GL_LEQUAL);
+			glDepthFunc(GL_LEQUAL); 
 
 			_skyboxShader->Bind();
-			_skyboxShader->SetUniformMatrix("u_View", MainCamera->GetProjection() * glm::mat4(glm::mat3(MainCamera->GetView())));
+			_skyboxShader->SetUniformMatrix("u_ClippedView", MainCamera->GetProjection() * glm::mat4(glm::mat3(MainCamera->GetView())));
 			_skyboxShader->SetUniformMatrix("u_EnvironmentRotation", _skyboxRotation);
 			_skyboxTexture->Bind(0);
 			_skyboxMesh->Mesh->Draw();

@@ -18,8 +18,10 @@
 #include "Graphics/Buffers/VertexBuffer.h"
 #include "Graphics/VertexArrayObject.h"
 #include "Graphics/ShaderProgram.h"
-#include "Graphics/Texture2D.h"
-#include "Graphics/TextureCube.h"
+#include "Graphics/Textures/Texture1D.h"
+#include "Graphics/Textures/Texture2D.h"
+#include "Graphics/Textures/Texture3D.h"
+#include "Graphics/Textures/TextureCube.h"
 #include "Graphics/VertexTypes.h"
 #include "Graphics/Font.h"
 #include "Graphics/GuiBatcher.h"
@@ -59,8 +61,8 @@
 Application* Application::_singleton = nullptr;
 std::string Application::_applicationName = "INFR-2350U - DEMO";
 
-#define DEFAULT_WINDOW_WIDTH 800
-#define DEFAULT_WINDOW_HEIGHT 600
+#define DEFAULT_WINDOW_WIDTH 1280
+#define DEFAULT_WINDOW_HEIGHT 720
 
 Application::Application() :
 	_window(nullptr),
@@ -109,7 +111,7 @@ void Application::Quit() {
 }
 
 bool Application::LoadScene(const std::string& path) {
-	if (std::filesystem::exists(path)) {
+	if (std::filesystem::exists(path)) { 
 
 		std::string manifestPath = std::filesystem::path(path).stem().string() + "-manifest.json";
 		if (std::filesystem::exists(manifestPath)) {
@@ -217,7 +219,7 @@ void Application::_Run()
 			_Update();
 			_LateUpdate();
 			_PreRender();
-			_RenderScene();
+			_RenderScene(); 
 			_PostRender();
 		}
 
@@ -244,7 +246,9 @@ void Application::_RegisterClasses()
 	ResourceManager::Init();
 
 	// Register all our resource types so we can load them from manifest files
+	ResourceManager::RegisterType<Texture1D>();
 	ResourceManager::RegisterType<Texture2D>();
+	ResourceManager::RegisterType<Texture3D>();
 	ResourceManager::RegisterType<TextureCube>();
 	ResourceManager::RegisterType<ShaderProgram>();
 	ResourceManager::RegisterType<Material>();
@@ -345,7 +349,7 @@ void Application::_PostRender() {
 	// We can use the application's viewport to set our OpenGL viewport, as well as clip rendering to that area
 	const glm::uvec4& viewport = GetPrimaryViewport();
 	glViewport(viewport.x, viewport.y, viewport.z, viewport.w);
-	glScissor(viewport.x, viewport.y, viewport.z, viewport.w);
+	glScissor(viewport.x, viewport.y, viewport.z, viewport.w); 
 
 	// If we have a final output, blit it to the screen
 	if (_renderOutput != nullptr) {

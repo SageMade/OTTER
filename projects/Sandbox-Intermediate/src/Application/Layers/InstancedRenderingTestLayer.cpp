@@ -19,7 +19,7 @@ void InstancedRenderingTestLayer::OnSceneLoad() {
 
 	// The number of elements we're generating as a cube
 	const glm::ivec3 size = { 10, 10, 10 };
-	float distance = 2.0f;
+	float distance = 2.0f;   
 
 	// Create a buffer to store out data, and reserve enough space for all our instances
 	_instanceBuffer = VertexBuffer::Create(BufferUsage::DynamicDraw);
@@ -77,7 +77,7 @@ void InstancedRenderingTestLayer::OnSceneLoad() {
 }
 
 void InstancedRenderingTestLayer::OnUpdate() {
-	_UpdateInstances();
+	//_UpdateInstances();
 }
 
 void InstancedRenderingTestLayer::OnRender(const Framebuffer::Sptr& prevLayer) {

@@ -5,6 +5,7 @@
 #include <filesystem>
 
 #include "Utils/FileHelpers.h"
+#include "Utils/JsonGlmHelpers.h"
 
 ShaderProgram::ShaderProgram() : 
 	IGraphicsResource(),
@@ -218,6 +219,10 @@ void ShaderProgram::SetUniform(int location, const glm::bvec4* value, int count)
 void ShaderProgram::SetUniform(int location, ShaderDataType type, void* data, int count /*= 1*/, bool transposed  /* =false*/) {
 	switch (type)
 	{
+		case ShaderDataType::Bool:    glProgramUniform1i(_rendererId, location, *static_cast<const bool*>(data)); break;
+		case ShaderDataType::Bool2:   glProgramUniform2i(_rendererId, location, *static_cast<const bool*>(data), *(static_cast<const bool*>(data) + 1)); break;
+		case ShaderDataType::Bool3:   glProgramUniform3i(_rendererId, location, *static_cast<const bool*>(data), *(static_cast<const bool*>(data) + 1), *(static_cast<const bool*>(data) + 2)); break;
+		case ShaderDataType::Bool4:   glProgramUniform4i(_rendererId, location, *static_cast<const bool*>(data), *(static_cast<const bool*>(data) + 1), *(static_cast<const bool*>(data) + 2), *(static_cast<const bool*>(data) + 3)); break;
 		case ShaderDataType::Float:   glProgramUniform1fv(_rendererId, location, count, static_cast<const float*>(data)); break;
 		case ShaderDataType::Float2:  glProgramUniform2fv(_rendererId, location, count, static_cast<const float*>(data)); break;
 		case ShaderDataType::Float3:  glProgramUniform3fv(_rendererId, location, count, static_cast<const float*>(data)); break;
@@ -310,6 +315,7 @@ int ShaderProgram::__GetUniformLocation(const std::string& name) {
 
 nlohmann::json ShaderProgram::ToJson() const {
 	nlohmann::json result;
+	result["name"] = _debugName;
 	for (auto& [key, value] : _fileSourceMap) {
 		result[~key][value.IsFilePath ? "path" : "source"] = value.Source;
 	}
@@ -319,6 +325,7 @@ nlohmann::json ShaderProgram::ToJson() const {
 
 ShaderProgram::Sptr ShaderProgram::FromJson(const nlohmann::json& data) {
 	ShaderProgram::Sptr result = std::make_shared<ShaderProgram>();
+	result->SetDebugName(JsonGet(data, "name", result->_debugName));
 	for (auto& [key, blob] : data.items()) {
 		// Get the shader part type from the key
 		ShaderPartType type = ParseShaderPartType(key, ShaderPartType::Unknown);
@@ -371,6 +378,7 @@ void ShaderProgram::_IntrospectUniforms() {
 		// Create a new Uniform Info
 		UniformInfo e = UniformInfo();
 		e.Name.resize(props[0] - 1);
+		e.Binding = -1;
 
 		// Query uniform name from the program
 		int length = 0;
@@ -380,6 +388,10 @@ void ShaderProgram::_IntrospectUniforms() {
 		e.Type = FromGLShaderDataType(props[1]);
 		e.Location = props[3];
 		e.ArraySize = props[2];
+
+		if (GetShaderDataTypeCode(e.Type) == ShaderDataTypecode::Texture) {			
+			glGetUniformiv(_rendererId, e.Location, &e.Binding);
+		}
 
 		// If this is an array, we need to trim the [] off the name
 		if (e.ArraySize > 1) {

@@ -1,6 +1,7 @@
 #include "Gameplay/InputEngine.h"
 #include <locale>
 #include <codecvt>
+#include "Application/Application.h"
 
 GLFWwindow* InputEngine::__window = nullptr;
 glm::dvec2 InputEngine::__mousePos  = glm::dvec2(0.0);
@@ -38,7 +39,9 @@ bool InputEngine::IsMouseButtonDown(int button) {
 }
 
 const glm::dvec2& InputEngine::GetMousePos() {
-	return __mousePos;
+	Application& app = Application::Get();
+	glm::vec4 viewport = app.GetPrimaryViewport();
+	return (__mousePos - glm::dvec2(viewport.x, viewport.y));
 }
 
 glm::dvec2 InputEngine::GetMouseDelta() {

@@ -92,6 +92,14 @@ public:
 	static void ToUpper(std::string& s);
 
 	/// <summary>
+	/// Returns true if value ends with token
+	/// </summary>
+	/// <param name="value"></param>
+	/// <param name="token"></param>
+	/// <returns></returns>
+	static bool EndsWith(const std::string& value, const std::string& token);
+
+	/// <summary>
 	/// Splits a string into multiple tokens, based on the given split condition
 	/// </summary>
 	/// <param name="s">The string that will be split</param>

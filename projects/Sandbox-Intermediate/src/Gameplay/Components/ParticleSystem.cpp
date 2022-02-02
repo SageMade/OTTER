@@ -114,15 +114,13 @@ void ParticleSystem::Update()
 	glEndTransformFeedback();
 	glEndQuery(GL_TRANSFORM_FEEDBACK_PRIMITIVES_WRITTEN);
 
-	if (_hasInit) {
-		// Use our query to get the number of particles
-		glGetQueryObjectuiv(_query, GL_QUERY_RESULT, &_numParticles);
-		if (_numParticles >= _emitters.size()) {
-			_numParticles -= _emitters.size();
-		}
-		else {
-			_numParticles = 0;
-		}
+	// Use our query to get the number of particles
+	glGetQueryObjectuiv(_query, GL_QUERY_RESULT, &_numParticles);
+	if (_numParticles >= _emitters.size()) {
+		_numParticles -= _emitters.size();
+	}
+	else {
+		_numParticles = 0;
 	}
 
 	// Clean up our state
@@ -147,7 +145,10 @@ void ParticleSystem::Update()
 
 void ParticleSystem::Render()
 {
+	// Make sure that we've actually initialized our stuff
 	if (_hasInit) {
+
+		// We're using our particle rendering shader
 		_renderShader->Bind();
 
 		// Make sure no VAOs are bound
@@ -188,13 +189,14 @@ void ParticleSystem::AddEmitter(const glm::vec3& position, const glm::vec3& dire
 
 void ParticleSystem::RenderImGui()
 {
-	ImGui::LabelText("Particle Count", "%u", _numParticles);
+	LABEL_LEFT(ImGui::LabelText, "Particle Count", "%u", _numParticles);
 
 	Application& app = Application::Get();
 
 	ImGui::Separator();
 	ImGui::Text("Emitters:");
 
+	// We can't add or edit emitters once the system has started
 	if (!app.CurrentScene()->IsPlaying) {
 		for (int ix = 0; ix < _emitters.size(); ix++) {
 			auto& emitter = _emitters[ix];
@@ -250,12 +252,14 @@ void ParticleSystem::Awake()
 		"out_Metadata" 
 	}; 
 
+	// This is our transform feedback shader
 	_updateShader = ShaderProgram::Create();
 	_updateShader->LoadShaderPartFromFile("shaders/vertex_shaders/particles_sim_vs.glsl", ShaderPartType::Vertex);
  	_updateShader->LoadShaderPartFromFile("shaders/geometry_shaders/particle_sim_gs.glsl", ShaderPartType::Geometry);
-	_updateShader->RegisterVaryings(varyings, 6, true);
+	_updateShader->RegisterVaryings(varyings, 6, true); // Here we call glTransformFeedbackVaryings, and let it know we want interleaved data
 	_updateShader->Link(); 
 
+	// This shader will render the particles
 	_renderShader = ShaderProgram::Create();
 	_renderShader->LoadShaderPartFromFile("shaders/vertex_shaders/particles_render_vs.glsl", ShaderPartType::Vertex);
 	_renderShader->LoadShaderPartFromFile("shaders/fragment_shaders/particles_render_fs.glsl", ShaderPartType::Fragment);

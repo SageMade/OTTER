@@ -1,7 +1,7 @@
 #pragma once
 #include <memory>
 #include "Graphics/ShaderProgram.h"
-#include "Graphics/ITexture.h"
+#include "Graphics/Textures/ITexture.h"
 
 namespace Gameplay {
 	/// <summary>
@@ -17,7 +17,7 @@ namespace Gameplay {
 		/// We'll sometimes want to reserve some texture slots for shared textures, such
 		/// as the environment map. We'll specify a number of reserved slots here
 		/// </summary>
-		static const int RESERVED_TEXTURE_SLOTS = 2;
+		static const int MAX_TEXTURE_SLOTS = 14;
 
 		/// <summary>
 		/// A human readable name for the material
@@ -107,6 +107,7 @@ namespace Gameplay {
 			};
 			// The size of the array, in elements
 			size_t         ArraySize;
+			int            BindingSlot;
 
 			// The type of uniform
 			ShaderDataType Type = ShaderDataType::None;
@@ -116,6 +117,7 @@ namespace Gameplay {
 				Location(-2),
 				TextureAsset(nullptr),
 				ArraySize(0),
+				BindingSlot(-1),
 				Type(ShaderDataType::None) 
 			{ }
 			UniformData(const UniformData& other);
@@ -128,7 +130,7 @@ namespace Gameplay {
 			/// <summary>
 			/// Renders GUI for this uniform
 			/// </summary>
-			void RenderImGui();
+			bool RenderImGui();
 
 			/// <summary>
 			/// Converts this uniform into a JSON representation
@@ -174,6 +176,6 @@ namespace Gameplay {
 		std::unordered_map<std::string, UniformData> _uniforms;
 
 		UniformData& _GetUniform(const std::string& name);
-
+		void _PopulateUniforms();
 	};
 }

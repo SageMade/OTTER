@@ -1,5 +1,6 @@
 #pragma once
 #include "Gameplay/Components/IComponent.h"
+#include "Graphics/ShaderProgram.h"
 
 ENUM(ParticleType, uint32_t,
 	Emitter       = 0,
