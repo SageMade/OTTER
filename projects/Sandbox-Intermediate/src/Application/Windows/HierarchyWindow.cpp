@@ -75,7 +75,7 @@ void HierarchyWindow::_RenderObjectNode(Gameplay::GameObject::Sptr object, int d
 
 	// We need to get the ID of the modal out here, since the menu item will push new 
 	// IDs to the stack and cause issues
-	ImGuiID deletePopup = ImGui::GetID("Delete Gameobject###HIERARCHY_DELETE");
+	ImGuiID deletePopup = ImGui::GetID("###HIERARCHY_DELETE");
 
 	// Render a popup on right-click
 	if (ImGui::BeginPopupContextItem()) {

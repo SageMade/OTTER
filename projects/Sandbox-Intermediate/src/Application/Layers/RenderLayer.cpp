@@ -64,13 +64,15 @@ void RenderLayer::OnRender(const Framebuffer::Sptr& prevLayer)
 	// Bind the skybox texture to a reserved texture slot
 	// See Material.h and Material.cpp for how we're reserving texture slots
 	TextureCube::Sptr environment = app.CurrentScene()->GetSkyboxTexture();
-	if (environment) 
+	if (environment) {
 		environment->Bind(15);
+	}
 
 	// Binding the color correction LUT
 	Texture3D::Sptr colorLUT = app.CurrentScene()->GetColorLUT();
-	if (colorLUT) 
+	if (colorLUT) {
 		colorLUT->Bind(14);
+	}
 
 	// Here we'll bind all the UBOs to their corresponding slots
 	app.CurrentScene()->PreRender();

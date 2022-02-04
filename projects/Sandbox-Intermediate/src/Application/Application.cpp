@@ -150,7 +150,7 @@ void Application::_Run()
 	_layers.push_back(std::make_shared<LogicUpdateLayer>());
 	_layers.push_back(std::make_shared<RenderLayer>());
 	_layers.push_back(std::make_shared<ParticleLayer>());
-	_layers.push_back(std::make_shared<InstancedRenderingTestLayer>());
+	//_layers.push_back(std::make_shared<InstancedRenderingTestLayer>());
 	_layers.push_back(std::make_shared<InterfaceLayer>());
 
 	// If we're in editor mode, we add all the editor layers
@@ -327,7 +327,7 @@ void Application::_RenderScene() {
 	for (const auto& layer : _layers) {
 		if (layer->Enabled && *(layer->Overrides & AppLayerFunctions::OnRender)) {
 			layer->OnRender(result);
-			Framebuffer::Sptr layerResult = layer->GetRenderOutput();
+			Framebuffer::Sptr layerResult = layer->GetRenderOutput(); 
 			result = layerResult != nullptr ? layerResult : result;
 		}
 	}

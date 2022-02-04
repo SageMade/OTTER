@@ -148,6 +148,7 @@ public:
 
 protected:
 	Texture3DDescription _description;
+	PixelType _pixelType;
 
 	/// <summary>
 	/// Loads this texture from the file specified in the description

@@ -9,7 +9,8 @@ inline int CalcRequiredMipLevels(int size) {
 
 Texture1D::Texture1D(const std::string& filePath) :
 	ITexture(TextureType::_1D),
-	_description(Texture1DDescription())
+	_description(Texture1DDescription()),
+	_pixelType(PixelType::Unknown)
 {
 	_description.Filename = filePath;
 	_SetTextureParams();
@@ -18,7 +19,8 @@ Texture1D::Texture1D(const std::string& filePath) :
 
 Texture1D::Texture1D(const Texture1DDescription& description) :
 	ITexture(TextureType::_1D),
-	_description(description)
+	_description(description),
+	_pixelType(PixelType::Unknown)
 {
 	_SetTextureParams();
 	if (!description.Filename.empty()) {
@@ -46,6 +48,7 @@ void Texture1D::LoadData(uint32_t size, PixelFormat format, PixelType type, void
 	LOG_ASSERT((size + offset) <= _description.Size, "Pixel bounds are outside of the X extents of the image!");
 
 	_description.FormatHint = format;
+	_pixelType = type;
 
 	// Align the data store to the size of a single component to ensure we don't get weirdness with images that aren't RGBA
 	// See https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/glPixelStore.xhtml
@@ -73,14 +76,15 @@ nlohmann::json Texture1D::ToJson() const
 	if (!_description.Filename.empty()) {
 		result["filename"] = _description.Filename;
 	}
-	else {
+	else if (_pixelType != PixelType::Unknown) {
 		result["size"] = _description.Size;
 		result["format"] = ~_description.FormatHint;
-		result["pixel_type"] = ~PixelType::UByte;
+		result["pixel_type"] = ~_pixelType;
+
 		if (_description.Size > 0 && _description.FormatHint != PixelFormat::Unknown) {
-			size_t dataSize = GetTexelSize(_description.FormatHint, PixelType::UByte) * _description.Size;
+			size_t dataSize = GetTexelSize(_description.FormatHint, _pixelType) * _description.Size;
 			uint8_t* dataStore = new uint8_t[dataSize];
-			glGetTextureImage(_rendererId, 0, *_description.Format, *PixelType::UByte, dataSize, dataStore);
+			glGetTextureImage(_rendererId, 0, *_description.Format, *_pixelType, dataSize, dataStore);
 			result["data"] = Base64::Encode(dataStore, dataSize);
 		}
 	}

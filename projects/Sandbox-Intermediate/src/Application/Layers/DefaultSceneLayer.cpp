@@ -161,8 +161,6 @@ void DefaultSceneLayer::_CreateScene()
 		leafTex->SetMinFilter(MinFilter::Nearest);
 		leafTex->SetMagFilter(MagFilter::Nearest);
 
-		// Loading in a color lookup table
-		Texture3D::Sptr lut = ResourceManager::CreateAsset<Texture3D>("luts/cool.cube"); 
 
 		// Loading in a 1D LUT
 		Texture1D::Sptr toonLut = ResourceManager::CreateAsset<Texture1D>("luts/toon-1D.png"); 
@@ -183,6 +181,9 @@ void DefaultSceneLayer::_CreateScene()
 		scene->SetSkyboxShader(skyboxShader);
 		// Since the skybox I used was for Y-up, we need to rotate it 90 deg around the X-axis to convert it to z-up
 		scene->SetSkyboxRotation(glm::rotate(MAT4_IDENTITY, glm::half_pi<float>(), glm::vec3(1.0f, 0.0f, 0.0f)));
+
+		// Loading in a color lookup table
+		Texture3D::Sptr lut = ResourceManager::CreateAsset<Texture3D>("luts/cool.cube"); 
 
 		// Configure the color correction LUT
 		scene->SetColorLUT(lut);
@@ -340,10 +341,6 @@ void DefaultSceneLayer::_CreateScene()
 			RenderComponent::Sptr renderer = monkey1->Add<RenderComponent>();
 			renderer->SetMesh(monkeyMesh);
 			renderer->SetMaterial(monkeyMaterial);
-
-			// Add a dynamic rigid body to this monkey
-			RigidBody::Sptr physics = monkey1->Add<RigidBody>(RigidBodyType::Dynamic);
-			physics->AddCollider(ConvexMeshCollider::Create());
 
 			// Example of a trigger that interacts with static and kinematic bodies as well as dynamic bodies
 			TriggerVolume::Sptr trigger = monkey1->Add<TriggerVolume>();

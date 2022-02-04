@@ -2,7 +2,7 @@
 
 #include "../fragments/fs_common_inputs.glsl"
 
-layout(location = 5) in vec2 inTextureWeights;
+layout(location = 7) in vec2 inTextureWeights;
 
 // We output a single color to the color buffer
 layout(location = 0) out vec4 frag_color;

@@ -6,6 +6,7 @@
 #include <stb_image.h>
 #include <iostream>
 #include <fstream>
+#include <filesystem>
 
 inline int CalcRequiredMipLevels(int width, int height, int depth) {
 	return (1 + floor(log2(std::max(width, std::max(height, depth)))));
@@ -13,7 +14,8 @@ inline int CalcRequiredMipLevels(int width, int height, int depth) {
 
 Texture3D::Texture3D(const std::string& filePath) : 
 	ITexture(TextureType::_3D),
-	_description(Texture3DDescription())
+	_description(Texture3DDescription()),
+	_pixelType(PixelType::Unknown)
 {
 	_description.Filename = filePath;
 	_LoadDataFromFile();
@@ -21,7 +23,8 @@ Texture3D::Texture3D(const std::string& filePath) :
 
 Texture3D::Texture3D(const Texture3DDescription& description) :
 	ITexture(TextureType::_3D),
-	_description(description)
+	_description(description),
+	_pixelType(PixelType::Unknown)
 {
 	_SetTextureParams();
 	if (!description.Filename.empty()) {
@@ -45,7 +48,8 @@ void Texture3D::LoadData(uint32_t width, uint32_t height, uint32_t depth, PixelF
 {
 	LOG_ASSERT(((width + offsetX) <= _description.Width) && ((height + offsetY) <= _description.Height) && ((depth + offsetZ) <= _description.Depth), "Pixel bounds are outside of the extents of the image!");
 
-	_description.FormatHint = format; 
+	_description.FormatHint = format;
+	_pixelType = type;
 
 	// Align the data store to the size of a single component to ensure we don't get weirdness with images that aren't RGBA
 	// See https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/glPixelStore.xhtml
@@ -75,18 +79,18 @@ nlohmann::json Texture3D::ToJson() const
 	if (!_description.Filename.empty()) {
 		result["filename"] = _description.Filename;
 	}
-	else {
+	else if (_pixelType != PixelType::Unknown) {
 		result["size_x"] = _description.Width;
 		result["size_y"] = _description.Height;
 		result["size_z"] = _description.Depth;
 
 		result["format"] = ~_description.FormatHint;
-		result["pixel_type"] = ~PixelType::UByte;
+		result["pixel_type"] = ~_pixelType;
 
 		if ((_description.Width * _description.Height * _description.Depth) > 0 && _description.FormatHint != PixelFormat::Unknown) {
-			size_t dataSize = GetTexelSize(_description.FormatHint, PixelType::UByte) * _description.Width * _description.Height * _description.Depth;
+			size_t dataSize = GetTexelSize(_description.FormatHint, _pixelType) * _description.Width * _description.Height * _description.Depth;
 			uint8_t* dataStore = new uint8_t[dataSize];
-			glGetTextureImage(_rendererId, 0, *_description.Format, *PixelType::UByte, dataSize, dataStore);
+			glGetTextureImage(_rendererId, 0, *_description.Format, *_pixelType, dataSize, dataStore);
 			result["data"] = Base64::Encode(dataStore, dataSize);
 		}
 	}
@@ -133,7 +137,11 @@ void Texture3D::_LoadDataFromFile()
 	LOG_ASSERT(_description.Width + _description.Height + _description.Depth == 0, "This texture has already been configured with a size! Cannot re-allocate memory!");
 
 	if (!_description.Filename.empty()) {
-		if (StringTools::EndsWith(_description.Filename, ".cube")) {
+		std::filesystem::path fPath = std::filesystem::path(_description.Filename);
+		std::string extension = fPath.extension().string();
+		StringTools::ToLower(extension);
+
+		if (extension.compare(".cube") == 0) {
 			_LoadCubeFile();
 		}
 	}
@@ -154,42 +162,86 @@ void Texture3D::_LoadCubeFile()
 	float r{ 0 }, g{ 0 }, b{ 0 };
 
 	std::string line;
+	// Iterate as long as we have lines from the file
 	while (std::getline(inFile, line)) {
+
+		// Trim whitespace from start and end of the line
+		StringTools::Trim(line);
+
+		// Skip empty lines
+		if (line.empty()) {
+			continue;
+		}
+
+		// Skip comments
+		else if (line[0] == '#') {
+			continue;
+		}
+
 		// Handle sizing the LUT
-		if (line.find("LUT_3D_SIZE") != std::string::npos) {
+		else if (line.find("LUT_3D_SIZE") != std::string::npos) {
+
+			// Skip over the LUT_3D_SIZE text and read in the value
 			std::stringstream lReader(line.substr(12));
 			lReader >> lutSize;
+
+			// Update the description's size
 			_description.Width = _description.Height = _description.Depth = lutSize;
 
+			// If the size we read is non-zero, allocate our data!
 			if (lutSize > 0) {
+				// If we had data already, delete it
 				if (textureData != nullptr) {
 					delete[] textureData;
 				} 
+
+				// Allocate data to store texels in
 				textureData = new glm::u8vec3[(size_t)lutSize * lutSize * lutSize];
+				ix = 0;
 			}
 		}
+
 		// We'll grab the title for our debug name, nice lil use of it
 		else if (line.find("TITLE") != std::string::npos) {
+
+			// Skip over the TITLE token and the space after it
 			std::string name = line.substr(6);
+
+			// Trim any excess whitespace
 			StringTools::Trim(name);
+
+			// We'll store this in the debug name
 			SetDebugName(name);
 		}
+
+		else if (line.find("DOMAIN_MIN") != std::string::npos)
+		{ /* ignore for now */ }
+
+		else if (line.find("DOMAIN_MAX") != std::string::npos)
+		{ /* ignore for now */ }
+
+		else if (line.find("LUT_1D_SIZE") != std::string::npos)
+		{ /* ignore for now */ }
+
 		// Reading data lines
-		else {
-			StringTools::Trim(line);
+		else if (!line.empty() && textureData != nullptr) {
 
+			// Make sure we don't case a write access violation
 			if (ix >= (lutSize * lutSize * lutSize) && lutSize > 0) {
-				LOG_ASSERT(false, "nani?");
+				LOG_ASSERT(false, "Attempting to write outside the bounds of the LUT");
 			}
 
-			if (!line.empty() && textureData != nullptr) {
-				std::stringstream lReader(line);
-				lReader >> r >> g >> b;
-				textureData[ix].r = static_cast<uint8_t>(r * 255);
-				textureData[ix].g = static_cast<uint8_t>(g * 255);
-				textureData[ix].b = static_cast<uint8_t>(b * 255);
-				ix++;
-			}
+			// Read RGB from the line
+			std::stringstream lReader(line);
+			lReader >> r >> g >> b;
+
+			// Store in the array, converting to the correct scale for bytes
+			textureData[ix].r = static_cast<uint8_t>(r * 255);
+			textureData[ix].g = static_cast<uint8_t>(g * 255);
+			textureData[ix].b = static_cast<uint8_t>(b * 255);
+
+			// Move to the next texel
+			ix++;
 		}
 	}
 
@@ -206,6 +258,9 @@ void Texture3D::_LoadCubeFile()
 
 		// Clean up after ourselves
 		delete[] textureData;
+	}
+	else {
+		LOG_WARN("Failed to load cube file: \"{}\"", _description.Filename);
 	}
 }
 

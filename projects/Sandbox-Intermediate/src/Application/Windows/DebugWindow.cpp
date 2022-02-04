@@ -14,7 +14,7 @@ DebugWindow::DebugWindow() :
 
 DebugWindow::~DebugWindow() = default;
 
-void DebugWindow::RenderMenuBar()
+void DebugWindow::RenderMenuBar() 
 {
 	Application& app = Application::Get();
 	RenderLayer::Sptr renderLayer = app.GetLayer<RenderLayer>();

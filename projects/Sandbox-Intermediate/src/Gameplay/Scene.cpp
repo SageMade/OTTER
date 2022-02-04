@@ -171,7 +171,7 @@ namespace Gameplay {
 
 		if (IsPlaying) {
 
-			_physicsWorld->stepSimulation(dt, 15);
+			_physicsWorld->stepSimulation(dt, 1);
 
 			_components.Each<Gameplay::Physics::RigidBody>([=](const std::shared_ptr<Gameplay::Physics::RigidBody>& body) {
 				body->PhysicsPostStep(dt);
