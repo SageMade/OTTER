@@ -341,30 +341,7 @@ void Application::_PostRender() {
 		const auto& layer = *it;
 		if (layer->Enabled && *(layer->Overrides & AppLayerFunctions::OnPostRender)) {
 			layer->OnPostRender();
-			Framebuffer::Sptr layerResult = layer->GetPostRenderOutput();
-			_renderOutput = layerResult != nullptr ? layerResult : _renderOutput;
 		}
-	}
-
-	// We can use the application's viewport to set our OpenGL viewport, as well as clip rendering to that area
-	const glm::uvec4& viewport = GetPrimaryViewport();
-	glViewport(viewport.x, viewport.y, viewport.z, viewport.w);
-	glScissor(viewport.x, viewport.y, viewport.z, viewport.w); 
-
-	// If we have a final output, blit it to the screen
-	if (_renderOutput != nullptr) {
-		_renderOutput->Unbind();
-
-		glm::ivec2 windowSize = _windowSize;
-		if (_isEditor) {
-			glfwGetWindowSize(_window, &windowSize.x, &windowSize.y);
-		}
-		//glViewport(0, 0, windowSize.x, windowSize.y);
-		glm::ivec4 viewportMinMax ={ viewport.x, viewport.y, viewport.x + viewport.z, viewport.y + viewport.w };
-
-		_renderOutput->Bind(FramebufferBinding::Read);
-		glBindFramebuffer(*FramebufferBinding::Write, 0);
-		Framebuffer::Blit({ 0, 0, _renderOutput->GetWidth(), _renderOutput->GetHeight() }, viewportMinMax, BufferFlags::All, MagFilter::Nearest);
 	}
 }
 

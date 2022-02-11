@@ -26,6 +26,11 @@ struct RenderTargetDescriptor {
 	 * The format that the rendertarget should use
 	 */
 	RenderTargetType       Format;
+
+	RenderTargetDescriptor(RenderTargetType format = RenderTargetType::ColorRgba8, bool useTexture = true) :
+		UseTexture(useTexture),
+		Format(format) 
+	{ }
 };
 
 /**

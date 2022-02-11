@@ -159,7 +159,7 @@ void Texture3D::_LoadCubeFile()
 	glm::u8vec3* textureData = nullptr;
 	uint32_t lutSize{ 0 };
 	uint32_t ix{ 0 };
-	float r{ 0 }, g{ 0 }, b{ 0 };
+	glm::vec3 rgb { 0, 0, 0 };
 
 	std::string line;
 	// Iterate as long as we have lines from the file
@@ -233,17 +233,19 @@ void Texture3D::_LoadCubeFile()
 
 			// Read RGB from the line
 			std::stringstream lReader(line);
-			lReader >> r >> g >> b;
+			lReader >> rgb.r >> rgb.g >> rgb.b;
+
+			rgb = glm::clamp(rgb, glm::vec3(0), glm::vec3(1));
 
 			// Store in the array, converting to the correct scale for bytes
-			textureData[ix].r = static_cast<uint8_t>(r * 255);
-			textureData[ix].g = static_cast<uint8_t>(g * 255);
-			textureData[ix].b = static_cast<uint8_t>(b * 255);
+			textureData[ix].r = static_cast<uint8_t>(rgb.r * 255);
+			textureData[ix].g = static_cast<uint8_t>(rgb.g * 255);
+			textureData[ix].b = static_cast<uint8_t>(rgb.b * 255);
 
 			// Move to the next texel
 			ix++;
 		}
-	}
+	} 
 
 	if (textureData != nullptr) {
 		// Set the pixel format

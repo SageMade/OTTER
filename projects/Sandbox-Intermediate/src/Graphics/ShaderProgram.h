@@ -159,7 +159,7 @@ public:
 	void SetUniform(const std::string& name, const T* values, int count = 1) {
 		int location = __GetUniformLocation(name);
 		if (location != -1) {
-			SetUniform(location, &values, count);
+			SetUniform(location, values, count);
 		} else {
 			LOG_WARN("Ignoring uniform \"{}\"", name);
 		}

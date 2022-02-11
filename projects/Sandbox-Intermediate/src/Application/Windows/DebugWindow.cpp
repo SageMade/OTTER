@@ -17,10 +17,10 @@ DebugWindow::~DebugWindow() = default;
 void DebugWindow::RenderMenuBar() 
 {
 	Application& app = Application::Get();
-	RenderLayer::Sptr renderLayer = app.GetLayer<RenderLayer>();
+	RenderLayer::Sptr renderLayer = app.GetLayer<RenderLayer>(); 
 
 	BulletDebugMode physicsDrawMode = app.CurrentScene()->GetPhysicsDebugDrawMode();
-	if (BulletDebugDraw::DrawModeGui("Physics Debug Mode:", physicsDrawMode)) {
+	if (BulletDebugDraw::DrawModeGui("Physics Debug Mode:", physicsDrawMode)) { 
 		app.CurrentScene()->SetPhysicsDebugDrawMode(physicsDrawMode);
 	}
 

@@ -7,11 +7,13 @@
 #include "Utils/Windows/FileDialogs.h"
 #include <filesystem>
 #include "RenderLayer.h"
+
 #include "../Windows/HierarchyWindow.h"
 #include "../Windows/InspectorWindow.h"
 #include "../Windows/MaterialsWindow.h"
 #include "../Windows/TextureWindow.h"
 #include "../Windows/DebugWindow.h"
+#include "../Windows/GBufferPreviews.h"
 
 ImGuiDebugLayer::ImGuiDebugLayer() :
 	ApplicationLayer(),
@@ -33,6 +35,7 @@ void ImGuiDebugLayer::OnAppLoad(const nlohmann::json& config)
 	RegisterWindow<MaterialsWindow>();
 	RegisterWindow<TextureWindow>();
 	RegisterWindow<DebugWindow>();
+	RegisterWindow<GBufferPreviews>();
 }
 
 void ImGuiDebugLayer::OnAppUnload()
@@ -207,37 +210,36 @@ void ImGuiDebugLayer::OnRender(const Framebuffer::Sptr& prevLayer)
 		ImGui::End();
 
 		_dockInvalid = false;
-	}
 
-	// Handle rendering the primary game viewport
-	_RenderGameWindow();
+		// Handle rendering the primary game viewport
+		_RenderGameWindow();
 
-	// Iterate over all the windows
-	for (const auto& window : _windows) {
-		if (*(window->Requirements & EditorWindowRequirements::Window)) {
-			// Track whether the window was previously open, only render open windows
-			bool wasOpen = window->Open;
-			if (window->Open) {
-				bool open = ImGui::Begin(window->Name.c_str(), &window->Open);
+		// Iterate over all the windows
+		for (const auto& window : _windows) {
+			if (*(window->Requirements & EditorWindowRequirements::Window)) {
+				// Track whether the window was previously open, only render open windows
+				bool wasOpen = window->Open;
+				if (window->Open) {
+					bool open = ImGui::Begin(window->Name.c_str(), &window->Open, window->WindowFlags);
 
-				// If the window was open or closed, mark our dock node as invalid
-				if (open != wasOpen) {
-					_dockInvalid = true;
-				}
+					// If the window was open or closed, mark our dock node as invalid
+					if (open != wasOpen) {
+						_dockInvalid = true;
+					}
 
-				// If window is closed, early bail and move to next window
-				if (!open) {
+					// If window is closed, early bail and move to next window
+					if (!open) {
+						ImGui::End();
+						continue;
+					}
+
+					// Otherwise render the window
+					window->Render();
 					ImGui::End();
-					continue;
 				}
-
-				// Otherwise render the window
-				window->Render();
-				ImGui::End();
 			}
 		}
 	}
-
 }
 
 void ImGuiDebugLayer::OnPostRender()

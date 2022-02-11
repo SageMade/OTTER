@@ -31,13 +31,9 @@ namespace Gameplay {
 		_skyboxMesh(nullptr),
 		_skyboxTexture(nullptr),
 		_skyboxRotation(glm::mat3(1.0f)),
+		_ambientLight(glm::vec3(0.1f)),
 		_gravity(glm::vec3(0.0f, 0.0f, -9.81f))
 	{
-		_lightingUbo = std::make_shared<UniformBuffer<LightingUboStruct>>();
-		_lightingUbo->GetData().AmbientCol = glm::vec3(0.1f);
-		_lightingUbo->Update();
-		_lightingUbo->Bind(LIGHT_UBO_BINDING_SLOT);
-
 		GameObject::Sptr mainCam = CreateGameObject("Main Camera");		
 		MainCamera = mainCam->Add<Camera>();
 
@@ -82,8 +78,6 @@ namespace Gameplay {
 
 	void Scene::SetSkyboxRotation(const glm::mat3& value) {
 		_skyboxRotation = value;
-		_lightingUbo->GetData().EnvironmentRotation = value;
-		_lightingUbo->Update();
 	}
 
 	const glm::mat3& Scene::GetSkyboxRotation() const {
@@ -127,12 +121,11 @@ namespace Gameplay {
 	}
 
 	void Scene::SetAmbientLight(const glm::vec3& value) {
-		_lightingUbo->GetData().AmbientCol = glm::vec3(0.1f);
-		_lightingUbo->Update();
+		_ambientLight = value;
 	}
 
 	const glm::vec3& Scene::GetAmbientLight() const { 
-		return _lightingUbo->GetData().AmbientCol;
+		return _ambientLight;
 	}
 
 	void Scene::Awake() {
@@ -155,8 +148,6 @@ namespace Gameplay {
 		for (auto& obj : _objects) {
 			obj->Awake();
 		}
-		// Set up our lighting 
-		SetupShaderAndLights();
 
 		_isAwake = true;
 	}
@@ -199,10 +190,6 @@ namespace Gameplay {
 		_FlushDeleteQueue();
 	}
 
-	void Scene::PreRender() {
-		_lightingUbo->Bind(LIGHT_UBO_BINDING);
-	}
-
 	void Scene::RenderGUI()
 	{
 		for (auto& obj : _objects) {
@@ -211,38 +198,6 @@ namespace Gameplay {
 				obj->RenderGUI();
 			}
 		}
-	}
-
-	void Scene::SetShaderLight(int index, bool update /*= true*/) {
-		if (index >= 0 && index < Lights.size() && index < MAX_LIGHTS) {
-			// Get a reference to the light UBO data so we can update it
-			LightingUboStruct& data = _lightingUbo->GetData();
-			Light& light = Lights[index];
-
-			// Copy to the ubo data
-			data.Lights[index].Position = light.Position;
-			data.Lights[index].Color = light.Color;
-			data.Lights[index].Attenuation = 1.0f / (1.0f + light.Range);
-
-			// If requested, send the new data to the UBO
-			if (update)	_lightingUbo->Update();
-		}
-	}
-
-	void Scene::SetupShaderAndLights() {
-		// Get a reference to the light UBO data so we can update it
-		LightingUboStruct& data = _lightingUbo->GetData();
-		// Send in how many active lights we have and the global lighting settings
-		data.AmbientCol = glm::vec3(0.1f);
-		data.NumLights = static_cast<float>(Lights.size());
-
-		// Iterate over all lights that are enabled and configure them
-		for (int ix = 0; ix < Lights.size(); ix++) {
-			SetShaderLight(ix, false);
-		}
-
-		// Send updated data to OpenGL
-		_lightingUbo->Update();
 	}
 
 	btDynamicsWorld* Scene::GetPhysicsWorld() const {

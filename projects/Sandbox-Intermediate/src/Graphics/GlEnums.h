@@ -120,6 +120,7 @@ constexpr size_t GetTexelComponentSize(PixelType type) {
 		return 2;
 	case PixelType::Int:
 	case PixelType::UInt:
+	case PixelType::Float:
 		return 4;
 	default:
 		LOG_ASSERT(false, "Unknown type: {}", type);

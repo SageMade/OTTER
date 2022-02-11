@@ -95,6 +95,7 @@ bool ShaderProgram::LoadShaderPartFromFile(const char* path, ShaderPartType type
 		if (result == false) {
 			LOG_ERROR("Source File: {}", path);
 		}
+		glObjectLabel(GL_SHADER, _handles[type], -1, path);
 		return result; 
 	} else {
 		LOG_WARN("Could not open file at \"{}\"", path);
@@ -142,7 +143,7 @@ bool ShaderProgram::Link() {
 			char* log = new char[length];
 			glGetProgramInfoLog(_rendererId, length, &length, log);
 			LOG_ERROR("Shader failed to link:\n{}", log);
-			delete[] log;
+			delete[] log; 
 		} else {
 			LOG_ERROR("Shader failed to link for an unknown reason!");
 		}
