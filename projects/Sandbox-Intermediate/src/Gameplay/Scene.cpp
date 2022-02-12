@@ -21,7 +21,6 @@ namespace Gameplay {
 	Scene::Scene() :
 		_objects(std::vector<GameObject::Sptr>()),
 		_deletionQueue(std::vector<std::weak_ptr<GameObject>>()),
-		Lights(std::vector<Light>()),
 		IsPlaying(false),
 		MainCamera(nullptr),
 		DefaultMaterial(nullptr),
@@ -48,7 +47,6 @@ namespace Gameplay {
 		_skyboxMesh = nullptr;
 		_skyboxTexture = nullptr;
 		_objects.clear();
-		Lights.clear();
 		_CleanupPhysics();
 	}
 
@@ -241,12 +239,6 @@ namespace Gameplay {
 			}
 		}
 
-		// Make sure the scene has lights, then load all
-		LOG_ASSERT(data["lights"].is_array(), "Lights not present in scene!");
-		for (auto& light : data["lights"]) {
-			result->Lights.push_back(Light::FromJson(light));
-		}
-
 		// Create and load camera config
 		result->MainCamera = result->_components.GetComponentByGUID<Camera>(Guid(data["main_camera"]));
 	
@@ -274,14 +266,6 @@ namespace Gameplay {
 			objects[ix] = _objects[ix]->ToJson();
 		}
 		blob["objects"] = objects;
-
-		// Save lights
-		std::vector<nlohmann::json> lights;
-		lights.resize(Lights.size());
-		for (int ix = 0; ix < Lights.size(); ix++) {
-			lights[ix] = Lights[ix].ToJson();
-		}
-		blob["lights"] = lights;
 
 		// Save camera info
 		blob["main_camera"] = MainCamera != nullptr ? MainCamera->GetGUID().str() : "null";
@@ -383,8 +367,8 @@ namespace Gameplay {
 			glDepthFunc(GL_LEQUAL); 
 
 			_skyboxShader->Bind();
-			_skyboxShader->SetUniformMatrix("u_ClippedView", MainCamera->GetProjection() * glm::mat4(glm::mat3(MainCamera->GetView())));
-			_skyboxShader->SetUniformMatrix("u_EnvironmentRotation", _skyboxRotation);
+			_skyboxShader->SetUniformMatrix("u_ClippedView", MainCamera->GetProjection());
+			_skyboxShader->SetUniformMatrix("u_EnvironmentRotation", _skyboxRotation * glm::inverse(glm::mat3(MainCamera->GetView())));
 			_skyboxTexture->Bind(0);
 			_skyboxMesh->Mesh->Draw();
 

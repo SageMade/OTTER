@@ -21,12 +21,16 @@ void GBufferPreviews::Render()
 
 	RenderLayer::Sptr& renderLayer = app.GetLayer<RenderLayer>();
 	Framebuffer::Sptr& framebuffer = renderLayer->GetRenderOutput();
+	const Framebuffer::Sptr& lightBuffer = renderLayer->GetLightingBuffer();
 
 	Texture2D::Sptr& depth = framebuffer->GetTextureAttachment(RenderTargetAttachment::Depth);
 	Texture2D::Sptr& color = framebuffer->GetTextureAttachment(RenderTargetAttachment::Color0);
 	Texture2D::Sptr& normals = framebuffer->GetTextureAttachment(RenderTargetAttachment::Color1);
 	Texture2D::Sptr& emissive = framebuffer->GetTextureAttachment(RenderTargetAttachment::Color2);
 	Texture2D::Sptr& viewspace = framebuffer->GetTextureAttachment(RenderTargetAttachment::Color3);
+
+	Texture2D::Sptr& diffuse = lightBuffer->GetTextureAttachment(RenderTargetAttachment::Color0);
+	Texture2D::Sptr& specular = lightBuffer->GetTextureAttachment(RenderTargetAttachment::Color1);
 
 	int width = (ImGui::GetContentRegionAvailWidth() / 2);
 	float aspect = app.GetWindowSize().x / (float)app.GetWindowSize().y;
@@ -43,11 +47,17 @@ void GBufferPreviews::Render()
 	_RenderTexture2D(normals, size, "normals");
 	ImGui::NextColumn();
 
-	_RenderTexture2D(emissive, size, "emissive");
-	ImGui::NextColumn();
+	_RenderTexture2D(emissive, size, "emissive"); 
+	ImGui::NextColumn();  
 
 	_RenderTexture2D(viewspace, size, "position (viewspace)");
 	ImGui::NextColumn();
+
+	_RenderTexture2D(diffuse, size, "Diffuse Lighting");
+	ImGui::NextColumn();
+
+	_RenderTexture2D(specular, size, "Specular Lighting");
+	ImGui::NextColumn(); 
 
 	ImGui::Columns(1);
 }

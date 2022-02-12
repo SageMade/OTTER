@@ -9,7 +9,7 @@ layout(location = 1) out vec4 outSpecular;
 
 // Represents a single light source
 struct Light {
-	vec4  Position;
+	vec4  PositionIntensity;
 	// Stores color in RBG and attenuation in w
 	vec4  ColorAttenuation;
 };
@@ -41,39 +41,43 @@ layout (std140, binding = 2) uniform b_LightBlock {
 // @param shininess The specular power for the fragment, between 0 and 1
 void CalcPointLightContribution(vec3 viewPos, vec3 normal, Light light, float shininess, inout vec3 diffuse, inout vec3 specular) {
 
-        vec3 lightViewPos = (u_View * vec4(light.Position.xyz, 1.0)).xyz;
+        vec3 lightViewPos = light.PositionIntensity.xyz;
         vec3 lightVec = lightViewPos - viewPos;
         float dist = length(lightVec);
         vec3 lightDir = lightVec / dist;
 
         // We'll use a modified distance squared attenuation factor to keep it simple
         // We add the one to prevent divide by zero errors
-        float attenuation = clamp(1.0 / (1.0 + light.ColorAttenuation.w * pow(dist, 2)), 0, 1);
+        float attenuation = clamp(1.0 / (1.0 + light.ColorAttenuation.w * pow(dist, 2)), 0, 256);
 
         // Dot product between normal and light
         float NdotL = max(dot(normal, lightDir), 0.0);
-        diffuse += NdotL * attenuation * light.ColorAttenuation.rgb;
+        diffuse += NdotL * attenuation * light.ColorAttenuation.rgb * light.PositionIntensity.w;
         
-        vec3 reflectDir = reflect(-lightDir, normal);
-        float VdotR = max(dot(normalize(-viewPos), reflectDir), 0.0);
-        VdotR = pow(VdotR, shininess);
+        vec3 reflectDir = reflect(lightDir, normal);
+        float VdotR = pow(max(dot(normalize(-viewPos), reflectDir), 0.0), pow(2, shininess * 8));
         
-        specular += vec3(VdotR) * attenuation * light.ColorAttenuation.rgb;
+        specular += VdotR * light.ColorAttenuation.rgb * shininess * attenuation * light.PositionIntensity.w;
 }
 
 void main() {
     vec3 normal = GetNormal(inUV);
-    vec3 albedo = GetAlbedo(inUV);
-    vec3 viewPos = GetViewPosition(inUV);
     
     if (length(normal) < 0.1) {
         discard;
     }
 
+    normal = normalize(normal);
+
+    vec3 albedo = GetAlbedo(inUV);
+    vec3 viewPos = GetViewPosition(inUV);
+    
+    float specularPow = texture(s_AlbedoSpec, inUV).a;
+
     vec3 diffuse = vec3(0);
     vec3 specular = vec3(0);
     for (int ix = 0; ix < AmbientColAndNumLights.w && ix < MAX_LIGHTS; ix++) {
-        CalcPointLightContribution(viewPos, normal, Lights[ix], texture(s_AlbedoSpec, inUV).a, diffuse, specular);
+        CalcPointLightContribution(viewPos, normal, Lights[ix], specularPow, diffuse, specular);
     }
 
     outDiffuse = vec4(diffuse, 1);

@@ -4,7 +4,6 @@
 
 #include "Gameplay/Components/Camera.h"
 #include "Gameplay/GameObject.h"
-#include "Gameplay/Light.h"
 
 #include "Physics/BulletDebugDraw.h"
 
@@ -35,9 +34,7 @@ namespace Gameplay {
 	class Scene {
 	public:
 		typedef std::shared_ptr<Scene> Sptr;
-
-		// Stores all the lights in our scene
-		std::vector<Light>         Lights;
+		
 		// The camera for our scene
 		Camera::Sptr               MainCamera;
 
@@ -46,7 +43,6 @@ namespace Gameplay {
 
 		// Whether the application is in "play mode", lets us leverage editors!
 		bool                       IsPlaying;
-
 
 		Scene();
 		~Scene();

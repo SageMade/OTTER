@@ -59,12 +59,8 @@ public:
 	/// </summary>
 	struct LightingUboStruct {
 		struct Light {
-			// This lets us continue to access Position as a vec3, but also allocates space for the
-			// pack at the end (since objects are vec4 aligned)
-			union {
-				glm::vec3 Position;
-				glm::vec4 Position4;
-			};
+			glm::vec3 Position;
+			float Intensity;
 			// Since these are tightly packed, will match the vec4 in light
 			glm::vec3 Color;
 			float     Attenuation;
@@ -96,6 +92,8 @@ public:
 
 	void SetRenderFlags(RenderFlags value);
 	RenderFlags GetRenderFlags() const;
+
+	const Framebuffer::Sptr& GetLightingBuffer() const;
 
 	// Inherited from ApplicationLayer
 

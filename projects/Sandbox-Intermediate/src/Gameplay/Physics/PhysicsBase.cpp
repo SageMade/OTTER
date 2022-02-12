@@ -5,6 +5,7 @@
 
 #include "Utils/GlmBulletConversions.h"
 #include "Utils/ImGuiHelper.h"
+#include "utils/JsonGlmHelpers.h"
 
 namespace Gameplay::Physics {
 int PhysicsBase::_editorSelectedColliderType = 0;

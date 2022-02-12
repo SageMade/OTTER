@@ -37,6 +37,7 @@
 #include "Gameplay/Material.h"
 #include "Gameplay/GameObject.h"
 #include "Gameplay/Scene.h"
+#include "Gameplay/Components/Light.h"
 
 // Components
 #include "Gameplay/Components/IComponent.h"
@@ -142,13 +143,28 @@ void DefaultSceneLayer::_CreateScene()
 		leafTex->SetMinFilter(MinFilter::Nearest);
 		leafTex->SetMagFilter(MagFilter::Nearest);
 
-		Texture2DDescription normalMapDefaultDef;
-		normalMapDefaultDef.Width = normalMapDefaultDef.Height = 1;
-		normalMapDefaultDef.Format = InternalFormat::RGB8;
+#pragma region Basic Texture Creation
+		Texture2DDescription singlePixelDescriptor;
+		singlePixelDescriptor.Width = singlePixelDescriptor.Height = 1;
+		singlePixelDescriptor.Format = InternalFormat::RGB8;
 
 		float normalMapDefaultData[3] = { 0.5f, 0.5f, 1.0f };
-		Texture2D::Sptr normalMapDefault = ResourceManager::CreateAsset<Texture2D>(normalMapDefaultDef);
+		Texture2D::Sptr normalMapDefault = ResourceManager::CreateAsset<Texture2D>(singlePixelDescriptor);
 		normalMapDefault->LoadData(1, 1, PixelFormat::RGB, PixelType::Float, normalMapDefaultData);
+
+		float solidBlack[3] = { 0.5f, 0.5f, 0.5f };
+		Texture2D::Sptr solidBlackTex = ResourceManager::CreateAsset<Texture2D>(singlePixelDescriptor);
+		solidBlackTex->LoadData(1, 1, PixelFormat::RGB, PixelType::Float, solidBlack);
+
+		float solidGrey[3] = { 0.0f, 0.0f, 0.0f };
+		Texture2D::Sptr solidGreyTex = ResourceManager::CreateAsset<Texture2D>(singlePixelDescriptor);
+		solidGreyTex->LoadData(1, 1, PixelFormat::RGB, PixelType::Float, solidGrey);
+
+		float solidWhite[3] = { 1.0f, 1.0f, 1.0f };
+		Texture2D::Sptr solidWhiteTex = ResourceManager::CreateAsset<Texture2D>(singlePixelDescriptor);
+		solidWhiteTex->LoadData(1, 1, PixelFormat::RGB, PixelType::Float, solidWhite);
+
+#pragma endregion 
 
 		// Loading in a 1D LUT
 		Texture1D::Sptr toonLut = ResourceManager::CreateAsset<Texture1D>("luts/toon-1D.png"); 
@@ -195,11 +211,11 @@ void DefaultSceneLayer::_CreateScene()
 			monkeyMaterial->Set("u_Material.Shininess", 0.5f);
 		}
 
-		// This will be the reflective material, we'll make the whole thing 90% reflective
-		Material::Sptr testMaterial = ResourceManager::CreateAsset<Material>(deferredForward);
+		// This will be the reflective material, we'll make the whole thing 50% reflective
+		Material::Sptr testMaterial = ResourceManager::CreateAsset<Material>(deferredForward); 
 		{
 			testMaterial->Name = "Box-Specular";
-			testMaterial->Set("u_Material.AlbedoMap", boxTexture);
+			testMaterial->Set("u_Material.AlbedoMap", boxTexture); 
 			testMaterial->Set("u_Material.Specular", boxSpec);
 			testMaterial->Set("u_Material.NormalMap", normalMapDefault);
 		}
@@ -268,16 +284,21 @@ void DefaultSceneLayer::_CreateScene()
 			multiTextureMat->Set("u_Material.NormalMapA", normalMapDefault);
 			multiTextureMat->Set("u_Material.NormalMapB", normalMapDefault);
 			multiTextureMat->Set("u_Material.Shininess", 0.5f);
-			multiTextureMat->Set("u_Scale", 0.1f);
+			multiTextureMat->Set("u_Scale", 0.1f); 
 		}
 
 		// Create some lights for our scene
-		scene->Lights.resize(32);
+		GameObject::Sptr lightParent = scene->CreateGameObject("Lights");
 
-		for (int ix = 0; ix < 32; ix++) {
-			scene->Lights[ix].Position = glm::vec3(glm::diskRand(25.0f), 1.0f);
-			scene->Lights[ix].Color = glm::linearRand(glm::vec3(0.0f), glm::vec3(1.0f));
-			scene->Lights[ix].Range = glm::linearRand(0.1f, 10.0f);
+		for (int ix = 0; ix < 50; ix++) {
+			GameObject::Sptr light = scene->CreateGameObject("Light");
+			light->SetPostion(glm::vec3(glm::diskRand(25.0f), 1.0f));
+			lightParent->AddChild(light);
+
+			Light::Sptr lightComponent = light->Add<Light>();
+			lightComponent->SetColor(glm::linearRand(glm::vec3(0.0f), glm::vec3(1.0f)));
+			lightComponent->SetRadius(glm::linearRand(0.1f, 10.0f));
+			lightComponent->SetIntensity(glm::linearRand(1.0f, 2.0f));
 		}
 
 		// We'll create a mesh that is a simple plane that we can resize later
@@ -357,7 +378,7 @@ void DefaultSceneLayer::_CreateScene()
 			// Add a render component
 			RenderComponent::Sptr renderer = specBox->Add<RenderComponent>();
 			renderer->SetMesh(boxMesh);
-			renderer->SetMaterial(testMaterial);
+			renderer->SetMaterial(testMaterial); 
 
 			demoBase->AddChild(specBox);
 		}

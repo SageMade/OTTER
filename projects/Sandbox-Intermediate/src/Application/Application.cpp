@@ -42,6 +42,7 @@
 #include "Gameplay/Components/TriggerVolumeEnterBehaviour.h"
 #include "Gameplay/Components/SimpleCameraControl.h"
 #include "Gameplay/Components/ParticleSystem.h"
+#include "Gameplay/Components/Light.h"
 
 // GUI
 #include "Gameplay/Components/GUI/RectTransform.h"
@@ -270,6 +271,7 @@ void Application::_RegisterClasses()
 	ComponentManager::RegisterType<GuiPanel>();
 	ComponentManager::RegisterType<GuiText>();
 	ComponentManager::RegisterType<ParticleSystem>();
+	ComponentManager::RegisterType<Light>();
 }
 
 void Application::_Load() {

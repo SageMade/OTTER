@@ -7,6 +7,7 @@
 #include "../Timing.h"
 #include "Gameplay/Components/ComponentManager.h"
 #include "Gameplay/Components/RenderComponent.h"
+#include "Gameplay/Components/Light.h"
 
 // GLM math library
 #include <GLM/glm.hpp>
@@ -119,8 +120,11 @@ void RenderLayer::OnRender(const Framebuffer::Sptr& prevLayer)
 
 	// Make sure depth testing and culling are re-enabled
 	glEnable(GL_DEPTH_TEST);
-	glEnable(GL_CULL_FACE);
-	glDepthMask(true);
+	glEnable(GL_CULL_FACE); 
+	glDepthMask(true); 
+
+	// Disable blending, we want to override any existing colors
+	glDisable(GL_BLEND);
 
 	// Render all our objects
 	app.CurrentScene()->Components().Each<RenderComponent>([&](const RenderComponent::Sptr& renderable) {
@@ -213,14 +217,14 @@ void RenderLayer::_AccumulateLighting()
 	// Update our lighting UBO for any shaders that need it
 	LightingUboStruct& data = _lightingUbo->GetData();
 	data.AmbientCol = scene->GetAmbientLight();
-	data.EnvironmentRotation = scene->GetSkyboxRotation();
+	data.EnvironmentRotation = scene->GetSkyboxRotation() * glm::inverse(glm::mat3(scene->MainCamera->GetView()));
 
 	const glm::vec3& ambient = scene->GetAmbientLight();
 	const glm::vec4 colors[2] = {
 		{ ambient, 1.0f },         // diffuse (multiplicative)
 		{ 0.0f, 0.0f, 0.0f, 1.0f } // specular (additive)
 	};
-	_ClearFramebuffer(_lightingFBO, colors, 2);
+	_ClearFramebuffer(_lightingFBO, colors, 2);  
 
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE);
@@ -235,22 +239,37 @@ void RenderLayer::_AccumulateLighting()
 	_primaryFBO->GetTextureAttachment(RenderTargetAttachment::Color2)->Bind(3); // emissive
 	_primaryFBO->GetTextureAttachment(RenderTargetAttachment::Color3)->Bind(4); // view pos
 
-	// We'll handle our lights in batches of 8, since thats the size of our lighting UBO
-	for (int ix = 0; ix < scene->Lights.size(); ix += MAX_LIGHTS) {
+	const glm::mat4& view = scene->MainCamera->GetView();
 
-		// Send in how many active lights we have and the global lighting settings
-		data.AmbientCol = glm::vec3(0.1f);
-		data.NumLights = static_cast<float>(glm::min(scene->Lights.size() - ix, (size_t)MAX_LIGHTS));
+	// Send in how many active lights we have and the global lighting settings
+	data.AmbientCol = glm::vec3(0.1f);
+	int ix = 0;
+	app.CurrentScene()->Components().Each<Light>([&](const Light::Sptr& light) {
+		glm::vec4 pos = light->GetGameObject()->GetTransform() * glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
+		pos = glm::vec4((glm::vec3)pos / pos.w, 1.0f);
+		pos = view * pos;
+		// Copy to the ubo data
+		data.Lights[ix].Position = (glm::vec3)(pos) / pos.w;
+		data.Lights[ix].Intensity = light->GetIntensity();
+		data.Lights[ix].Color = light->GetColor();
+		data.Lights[ix].Attenuation = 1.0f / (1.0f + light->GetRadius());  
 
-		// Iterate over all lights that are enabled and configure them
-		for (int lx = 0; lx < data.NumLights; lx++) {
-			Light& light = scene->Lights[ix + lx];
+		ix++;
 
-			// Copy to the ubo data
-			data.Lights[lx].Position = light.Position;
-			data.Lights[lx].Color = light.Color;
-			data.Lights[lx].Attenuation = 1.0f / (1.0f + light.Range);
+		if (ix == MAX_LIGHTS) {
+			data.NumLights = MAX_LIGHTS;
+
+			// Send updated data to OpenGL
+			_lightingUbo->Update();
+
+			// Draw the fullscreen quad to accumulate the lights
+			_fullscreenQuad->Draw();
+
+			ix = 0;
 		}
+	});
+	if (ix > 0) {
+		data.NumLights = ix;
 
 		// Send updated data to OpenGL
 		_lightingUbo->Update();
@@ -286,9 +305,11 @@ void RenderLayer::_Composite()
 
 	// Bind our albedo and lighting buffers so we can composite a final scene
 	_primaryFBO->GetTextureAttachment(RenderTargetAttachment::Color0)->Bind(0);
-	_lightingFBO->GetTextureAttachment(RenderTargetAttachment::Color0)->Bind(1);
-	_lightingFBO->GetTextureAttachment(RenderTargetAttachment::Color1)->Bind(2);
-	_fullscreenQuad->Draw();
+	_primaryFBO->GetTextureAttachment(RenderTargetAttachment::Color1)->Bind(1);
+	_lightingFBO->GetTextureAttachment(RenderTargetAttachment::Color0)->Bind(2); 
+	_lightingFBO->GetTextureAttachment(RenderTargetAttachment::Color1)->Bind(3);
+	_primaryFBO->GetTextureAttachment(RenderTargetAttachment::Color2)->Bind(4);  
+	_fullscreenQuad->Draw(); 
 
 	// Re-enable depth testing
 	glEnable(GL_DEPTH_TEST);
@@ -458,4 +479,7 @@ RenderFlags RenderLayer::GetRenderFlags() const {
 	return _renderFlags;
 }
 
+const Framebuffer::Sptr& RenderLayer::GetLightingBuffer() const {
+	return _lightingFBO;
+}
 

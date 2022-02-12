@@ -126,8 +126,11 @@ namespace Gameplay::Physics {
 
 			// If the item no longer exists in the list, we need to invoke exit callbacks
 			if (it == thisFrameCollision.end()) {
-				weakPtr.lock()->GetGameObject()->OnLeavingTrigger(std::dynamic_pointer_cast<TriggerVolume>(SelfRef().lock()));
-				GetGameObject()->OnTriggerVolumeLeaving(weakPtr.lock());
+				RigidBody::Sptr body = weakPtr.lock();
+				if (body != nullptr) {
+					body->GetGameObject()->OnLeavingTrigger(std::dynamic_pointer_cast<TriggerVolume>(SelfRef().lock()));
+					GetGameObject()->OnTriggerVolumeLeaving(body);
+				}
 			}
 		}
 
