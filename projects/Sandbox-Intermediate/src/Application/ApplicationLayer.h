@@ -108,18 +108,6 @@ public:
 	virtual void NotifyAppConfigChanged(const nlohmann::json& config) {}
 
 	/**
-	 * Returns the render output for the application layer. If the result is nullptr, this 
-	 * layer is rendering to the primary FBO
-	 */
-	virtual Framebuffer::Sptr GetRenderOutput() { return nullptr; }
-
-	/**
-	 * Returns the render output from the layer's PostRender pass. If the result is nullptr, this
-	 * layer is either disable for PostRender, or renders to the primary FBO
-	 */
-	virtual Framebuffer::Sptr GetPostRenderOutput() { return nullptr; }
-
-	/**
 	 * Allows the layer to return default application configuration settings for the layer
 	 * 
 	 * @returns A JSON object containing the default configuration parameters for the layer

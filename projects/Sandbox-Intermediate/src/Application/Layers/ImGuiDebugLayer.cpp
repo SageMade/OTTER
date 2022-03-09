@@ -14,6 +14,7 @@
 #include "../Windows/TextureWindow.h"
 #include "../Windows/DebugWindow.h"
 #include "../Windows/GBufferPreviews.h"
+#include "../Windows/PostProcessingSettingsWindow.h"
 
 ImGuiDebugLayer::ImGuiDebugLayer() :
 	ApplicationLayer(),
@@ -36,6 +37,7 @@ void ImGuiDebugLayer::OnAppLoad(const nlohmann::json& config)
 	RegisterWindow<TextureWindow>();
 	RegisterWindow<DebugWindow>();
 	RegisterWindow<GBufferPreviews>();
+	RegisterWindow<PostProcessingSettingsWindow>();
 }
 
 void ImGuiDebugLayer::OnAppUnload()

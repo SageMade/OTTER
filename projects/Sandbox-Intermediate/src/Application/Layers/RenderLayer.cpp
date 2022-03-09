@@ -23,7 +23,7 @@ RenderLayer::RenderLayer() :
 	_blitFbo(true),
 	_frameUniforms(nullptr),
 	_instanceUniforms(nullptr),
-	_renderFlags(RenderFlags::EnableColorCorrection),
+	_renderFlags(RenderFlags::None),
 	_clearColor({ 0.1f, 0.1f, 0.1f, 1.0f })
 {
 	Name = "Rendering";
@@ -41,7 +41,6 @@ void RenderLayer::OnPreRender()
 
 	Application& app = Application::Get();
 
-
 	// Clear the color and depth buffers
 	const glm::vec4 colors[4] = {
 		glm::vec4(0.0f),
@@ -50,8 +49,10 @@ void RenderLayer::OnPreRender()
 		glm::vec4(0.0f)
 	};
 
+	_primaryFBO->Bind();
 	// Clear the framebuffer. Note that this also binds and sets the viewport
 	_ClearFramebuffer(_primaryFBO, colors, 4);
+
 	
 	// Grab shorthands to the camera and shader from the scene
 	Camera::Sptr camera = app.CurrentScene()->MainCamera;
@@ -168,14 +169,25 @@ void RenderLayer::OnRender(const Framebuffer::Sptr& prevLayer)
 		renderable->GetMesh()->Draw();
 	});
 
+	// Use our cubemap to draw our skybox
+	app.CurrentScene()->DrawSkybox();
+
+	VertexArrayObject::Unbind(); 
+}
+
+void RenderLayer::OnPostRender() {
+	using namespace Gameplay;
+
 	// Unbind our G-Buffer
-	_primaryFBO->Unbind();
+	_primaryFBO->Unbind(); 
 
 	// Composite our lighting 
 	_Composite();
 
-	// Restore viewport to game viewport
+	Application& app = Application::Get();
 	const glm::uvec4& viewport = app.GetPrimaryViewport();
+
+	// Restore viewport to game viewport
 	glViewport(viewport.x, viewport.y, viewport.z, viewport.w);
 
 	// Blit our depth to the primary framebuffer so that other rendering can use it
@@ -187,24 +199,17 @@ void RenderLayer::OnRender(const Framebuffer::Sptr& prevLayer)
 		GL_NEAREST
 	);
 
-
-	VertexArrayObject::Unbind(); 
-}
-
-void RenderLayer::OnPostRender() {
-	using namespace Gameplay;
-
-	Application& app = Application::Get();
-	const glm::uvec4& viewport = app.GetPrimaryViewport();
-
 	// TODO: post processing effects
 
+	_outputBuffer->Unbind();
 	_outputBuffer->Bind(FramebufferBinding::Read);
 	Framebuffer::Blit(
 		{ 0, 0, _outputBuffer->GetWidth(), _outputBuffer->GetHeight() },
 		{ viewport.x, viewport.y, viewport.x + viewport.z, viewport.y + viewport.w },
 		BufferFlags::Color
 	);
+
+	_outputBuffer->Unbind();
 }
 
 void RenderLayer::_AccumulateLighting()
@@ -245,9 +250,10 @@ void RenderLayer::_AccumulateLighting()
 	data.AmbientCol = glm::vec3(0.1f);
 	int ix = 0;
 	app.CurrentScene()->Components().Each<Light>([&](const Light::Sptr& light) {
-		glm::vec4 pos = light->GetGameObject()->GetTransform() * glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
-		pos = glm::vec4((glm::vec3)pos / pos.w, 1.0f);
+		// Get the light's position in view space, since we're doing view space lighting
+		glm::vec4 pos = glm::vec4(light->GetGameObject()->GetWorldPosition(), 1.0f);
 		pos = view * pos;
+
 		// Copy to the ubo data
 		data.Lights[ix].Position = (glm::vec3)(pos) / pos.w;
 		data.Lights[ix].Intensity = light->GetIntensity();
@@ -256,6 +262,7 @@ void RenderLayer::_AccumulateLighting()
 
 		ix++;
 
+		// If we've reached the max # of lights the shader supports, draw to the screen and start the next batch
 		if (ix == MAX_LIGHTS) {
 			data.NumLights = MAX_LIGHTS;
 
@@ -268,6 +275,8 @@ void RenderLayer::_AccumulateLighting()
 			ix = 0;
 		}
 	});
+
+	// If we have lights left over that haven't been drawn, draw them now
 	if (ix > 0) {
 		data.NumLights = ix;
 
@@ -380,8 +389,6 @@ void RenderLayer::OnAppLoad(const nlohmann::json& config)
 	FramebufferDescriptor fboDescriptor;
 	fboDescriptor.Width = app.GetWindowSize().x;
 	fboDescriptor.Height = app.GetWindowSize().y;
-	fboDescriptor.GenerateUnsampled = false;
-	fboDescriptor.SampleCount = 1;
 
 	// We want to use a 32 bit depth buffer, we'll ignore the stencil buffer for now
 	fboDescriptor.RenderTargets[RenderTargetAttachment::Depth] = RenderTargetDescriptor(RenderTargetType::Depth32);
@@ -459,8 +466,8 @@ void RenderLayer::SetBlitEnabled(bool value) {
 	_blitFbo = value;
 }
 
-Framebuffer::Sptr RenderLayer::GetRenderOutput() {
-	return _primaryFBO;
+const Framebuffer::Sptr& RenderLayer::GetRenderOutput() const {
+	return _outputBuffer;
 }
 
 const glm::vec4& RenderLayer::GetClearColor() const {
@@ -481,5 +488,10 @@ RenderFlags RenderLayer::GetRenderFlags() const {
 
 const Framebuffer::Sptr& RenderLayer::GetLightingBuffer() const {
 	return _lightingFBO;
+}
+
+const Framebuffer::Sptr& RenderLayer::GetGBuffer() const
+{
+	return _primaryFBO;
 }
 

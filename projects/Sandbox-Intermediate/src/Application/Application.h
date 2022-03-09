@@ -140,8 +140,6 @@ protected:
 	// Stores all the layers of the application, in the order they should be invoked
 	std::vector<ApplicationLayer::Sptr> _layers;
 
-	Framebuffer::Sptr _renderOutput;
-
 	void _Run();
 	void _RegisterClasses();
 	void _Load();

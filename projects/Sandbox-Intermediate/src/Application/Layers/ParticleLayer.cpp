@@ -1,12 +1,13 @@
 #include "ParticleLayer.h"
 #include "Gameplay/Components/ParticleSystem.h"
 #include "Application/Application.h"
+#include "RenderLayer.h"
 
 ParticleLayer::ParticleLayer() :
 	ApplicationLayer()
 {
 	Name = "Particles";
-	Overrides = AppLayerFunctions::OnUpdate | AppLayerFunctions::OnRender;
+	Overrides = AppLayerFunctions::OnUpdate | AppLayerFunctions::OnPostRender;
 }
 
 ParticleLayer::~ParticleLayer()
@@ -27,11 +28,23 @@ void ParticleLayer::OnUpdate()
 	}
 }
 
-void ParticleLayer::OnRender(const Framebuffer::Sptr& prevLayer)
+void ParticleLayer::OnPostRender()
 {
+	Application& app = Application::Get();
+	const glm::uvec4& viewport = app.GetPrimaryViewport();
+
+	// Restore viewport to game viewport
+
+	RenderLayer::Sptr renderer = app.GetLayer<RenderLayer>();
+	const Framebuffer::Sptr renderOutput = renderer->GetRenderOutput();
+	renderOutput->Bind();
+	glViewport(0, 0, renderOutput->GetWidth(), renderOutput->GetHeight());
+
 	Application::Get().CurrentScene()->Components().Each<ParticleSystem>([](const ParticleSystem::Sptr& system) {
 		if (system->IsEnabled) {
-			system->Render();
+			system->Render(); 
 		}
 	});
+
+	renderer->GetRenderOutput()->Unbind();
 }

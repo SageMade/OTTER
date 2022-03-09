@@ -22,6 +22,7 @@ namespace Gameplay {
 		_objects(std::vector<GameObject::Sptr>()),
 		_deletionQueue(std::vector<std::weak_ptr<GameObject>>()),
 		IsPlaying(false),
+		IsDestroyed(false),
 		MainCamera(nullptr),
 		DefaultMaterial(nullptr),
 		_isAwake(false),
@@ -42,12 +43,14 @@ namespace Gameplay {
 
 	Scene::~Scene() {
 		MainCamera = nullptr;
-		DefaultMaterial = nullptr;
+		DefaultMaterial = nullptr; 
 		_skyboxShader = nullptr;
 		_skyboxMesh = nullptr;
 		_skyboxTexture = nullptr;
 		_objects.clear();
+		_components.Clear();
 		_CleanupPhysics();
+		IsDestroyed = true;
 	}
 
 	void Scene::SetPhysicsDebugDrawMode(BulletDebugMode mode) {
@@ -181,8 +184,8 @@ namespace Gameplay {
 	void Scene::Update(float dt) {
 		_FlushDeleteQueue();
 		if (IsPlaying) {
-			for (auto& obj : _objects) {
-				obj->Update(dt);
+			for (int i = 0; i < _objects.size(); i++) {
+				_objects[i]->Update(dt);
 			}
 		}
 		_FlushDeleteQueue();

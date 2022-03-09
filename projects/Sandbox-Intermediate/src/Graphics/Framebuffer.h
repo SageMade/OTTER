@@ -40,15 +40,11 @@ struct RenderTargetDescriptor {
 struct FramebufferDescriptor {
 	uint32_t Width;
 	uint32_t Height;
-	uint8_t  SampleCount;
-	bool     GenerateUnsampled;
 	std::unordered_map<RenderTargetAttachment, RenderTargetDescriptor> RenderTargets;
 
 	FramebufferDescriptor() :
 		Width(0),
 		Height(0),
-		SampleCount(1),
-		GenerateUnsampled(false),
 		RenderTargets(std::unordered_map<RenderTargetAttachment, RenderTargetDescriptor>())
 	{ }
 };
@@ -83,7 +79,7 @@ public:
 	 * @param attachment The render target attachment slot to fetch
 	 * @returns The texture bound to the given slot, or nullptr if the attachment is empty or a renderbuffer
 	 */
-	Texture2D::Sptr GetTextureAttachment(RenderTargetAttachment attachment, bool multisampled = false) const;
+	Texture2D::Sptr GetTextureAttachment(RenderTargetAttachment attachment) const;
 
 	/**
 	 * Resizes this Framebuffer and all attachments to the given dimensions in pixels. Destroys all data
@@ -166,9 +162,6 @@ public:
 	static Framebuffer::Sptr FromJson(const nlohmann::json& blob);
 
 protected:
-	// The max samples allowed by OpenGL
-	static int __MAX_SAMPLES;
-
 	// The descriptor for this framebuffer
 	FramebufferDescriptor _description;
 	// True if the Framebuffer has been validated
@@ -176,10 +169,6 @@ protected:
 
 	// The slots that the framebuffer is currently bound to
 	mutable FramebufferBinding _currentBinding;
-
-	// When multisampling is enabled, we need a copy of the framebuffer that we 
-	// can blit to for resolving multisampling
-	Sptr                 _unsampledFramebuffer;
 
 	// Describes a single render target within the framebuffer
 	struct RenderTarget {

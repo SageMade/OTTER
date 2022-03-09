@@ -20,7 +20,7 @@ void GBufferPreviews::Render()
 	Application& app = Application::Get();
 
 	RenderLayer::Sptr& renderLayer = app.GetLayer<RenderLayer>();
-	Framebuffer::Sptr& framebuffer = renderLayer->GetRenderOutput();
+	const Framebuffer::Sptr& framebuffer = renderLayer->GetGBuffer();
 	const Framebuffer::Sptr& lightBuffer = renderLayer->GetLightingBuffer();
 
 	Texture2D::Sptr& depth = framebuffer->GetTextureAttachment(RenderTargetAttachment::Depth);

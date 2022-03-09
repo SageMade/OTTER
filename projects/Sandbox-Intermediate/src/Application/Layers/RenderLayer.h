@@ -94,6 +94,8 @@ public:
 	RenderFlags GetRenderFlags() const;
 
 	const Framebuffer::Sptr& GetLightingBuffer() const;
+	const Framebuffer::Sptr& GetRenderOutput() const;
+	const Framebuffer::Sptr& GetGBuffer() const;
 
 	// Inherited from ApplicationLayer
 
@@ -102,15 +104,16 @@ public:
 	virtual void OnRender(const Framebuffer::Sptr& prevLayer) override;
 	virtual void OnPostRender() override;
 	virtual void OnWindowResize(const glm::ivec2& oldSize, const glm::ivec2& newSize) override;
-	virtual Framebuffer::Sptr GetRenderOutput() override;
 
 protected:
 	Framebuffer::Sptr   _primaryFBO;
 	Framebuffer::Sptr   _lightingFBO;
 	Framebuffer::Sptr   _outputBuffer;
+
 	ShaderProgram::Sptr _clearShader;
 	ShaderProgram::Sptr _lightAccumulationShader;
 	ShaderProgram::Sptr _compositingShader;
+
 	VertexArrayObject::Sptr _fullscreenQuad;
 
 	bool              _blitFbo;

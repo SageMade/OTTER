@@ -79,12 +79,12 @@ void ParticleSystem::Update()
 	glBindBuffer(GL_ARRAY_BUFFER, _particleBuffers[_currentVertexBuffer]);
 	glBindTransformFeedback(GL_TRANSFORM_FEEDBACK, _feedbackBuffers[_currentFeedbackBuffer]);
 
-	// Enable our attributes, aside from color since it doesn't impact simulation
+	// Enable our attributes
 	glEnableVertexAttribArray(0);
 	glEnableVertexAttribArray(1);
 	glEnableVertexAttribArray(2);
 	glEnableVertexAttribArray(3);
-	glEnableVertexAttribArray(4);
+	glEnableVertexAttribArray(4); 
 	glEnableVertexAttribArray(5);
 
 	glVertexAttribIPointer(0, 1, GL_UNSIGNED_INT, sizeof(ParticleData), 0); // type
@@ -96,7 +96,8 @@ void ParticleSystem::Update()
 
 	// Bind the update shader and send our relevant uniforms
 	_updateShader->Bind();
-	_updateShader->SetUniform("u_Gravity", _gravity);
+	_updateShader->SetUniform("u_Gravity", _gravity); 
+	_updateShader->SetUniformMatrix("u_ModelMatrix", GetGameObject()->GetTransform()); 
 
 	// Our particles are points that we're simulating
 	glBeginQuery(GL_TRANSFORM_FEEDBACK_PRIMITIVES_WRITTEN, _query);
@@ -154,12 +155,17 @@ void ParticleSystem::Render()
 		// Make sure no VAOs are bound
 		glBindVertexArray(0);
 
-		// Bind the current feedback buffer as our drawing buffer
-		glBindBuffer(GL_ARRAY_BUFFER, _particleBuffers[_currentVertexBuffer]);
+		glEnablei(GL_BLEND, 0);
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-		// Enable just position and color
+		// Bind the current feedback buffer as our drawing buffer
+		glBindBuffer(GL_ARRAY_BUFFER, _particleBuffers[_currentVertexBuffer]); 
+
+		// Enable type, position and color 
+		glEnableVertexAttribArray(0); 
 		glEnableVertexAttribArray(1);
 		glEnableVertexAttribArray(3);
+		glVertexAttribIPointer(0, 1, GL_UNSIGNED_INT, sizeof(ParticleData), 0); // type
 		glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(ParticleData), (const GLvoid*)offsetof(ParticleData, Position)); // position
 		glVertexAttribPointer(3, 4, GL_FLOAT, GL_FALSE, sizeof(ParticleData), (const GLvoid*)offsetof(ParticleData, Color)); // color 
 

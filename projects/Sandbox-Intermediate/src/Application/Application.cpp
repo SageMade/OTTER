@@ -58,6 +58,7 @@
 #include "Layers/ImGuiDebugLayer.h"
 #include "Layers/InstancedRenderingTestLayer.h"
 #include "Layers/ParticleLayer.h"
+#include "Layers/PostProcessingLayer.h"
 
 Application* Application::_singleton = nullptr;
 std::string Application::_applicationName = "INFR-2350U - DEMO";
@@ -72,8 +73,7 @@ Application::Application() :
 	_isEditor(true),
 	_windowTitle("INFR - 2350U"),
 	_currentScene(nullptr),
-	_targetScene(nullptr),
-	_renderOutput(nullptr)
+	_targetScene(nullptr)
 { }
 
 Application::~Application() = default; 
@@ -151,6 +151,7 @@ void Application::_Run()
 	_layers.push_back(std::make_shared<LogicUpdateLayer>());
 	_layers.push_back(std::make_shared<RenderLayer>());
 	_layers.push_back(std::make_shared<ParticleLayer>());
+	_layers.push_back(std::make_shared<PostProcessingLayer>());
 	//_layers.push_back(std::make_shared<InstancedRenderingTestLayer>());
 	_layers.push_back(std::make_shared<InterfaceLayer>());
 
@@ -329,17 +330,13 @@ void Application::_RenderScene() {
 	for (const auto& layer : _layers) {
 		if (layer->Enabled && *(layer->Overrides & AppLayerFunctions::OnRender)) {
 			layer->OnRender(result);
-			Framebuffer::Sptr layerResult = layer->GetRenderOutput(); 
-			result = layerResult != nullptr ? layerResult : result;
 		}
 	}
-	_renderOutput = result;
-
 }
 
 void Application::_PostRender() {
 	// Note that we use a reverse iterator for post render
-	for (auto it = _layers.crbegin(); it != _layers.crend(); it++) {
+	for (auto it = _layers.begin(); it != _layers.end(); it++) {
 		const auto& layer = *it;
 		if (layer->Enabled && *(layer->Overrides & AppLayerFunctions::OnPostRender)) {
 			layer->OnPostRender();
