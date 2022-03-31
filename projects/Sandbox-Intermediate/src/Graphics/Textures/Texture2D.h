@@ -47,6 +47,8 @@ struct Texture2DDescription {
 	/// </summary>
 	uint8_t        MultisampleCount;
 
+	bool           EnableShadowSampling;
+
 	/// <summary>
 	/// The path to the source file for the image, or an empty string if the file has been
 	/// generated
@@ -71,7 +73,8 @@ struct Texture2DDescription {
 		GenerateMipMaps(true),
 		MultisampleCount(1),
 		Filename(""),
-		FormatHint(PixelFormat::RGBA)
+		FormatHint(PixelFormat::RGBA),
+		EnableShadowSampling(false)
 	{ }
 };
 

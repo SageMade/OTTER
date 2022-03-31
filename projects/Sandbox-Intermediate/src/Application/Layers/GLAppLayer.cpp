@@ -17,6 +17,7 @@ void GLAppLayer::OnAppLoad(const nlohmann::json& config) {
 
 	Application& app = Application::Get();
 
+	glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, true);
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
@@ -31,6 +32,10 @@ void GLAppLayer::OnAppLoad(const nlohmann::json& config) {
 	LOG_ASSERT(gladLoadGLLoader((GLADloadproc)glfwGetProcAddress) != 0, "Failed to initialize glad");
 
 	glEnable(GL_PROGRAM_POINT_SIZE);
+
+	glEnable(GL_DEBUG_OUTPUT);
+	glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
+	glDebugMessageCallback(GlDebugMessageCallback, &app);
 
 	// Display our GPU and OpenGL version
 	LOG_INFO(glGetString(GL_RENDERER));
@@ -56,13 +61,13 @@ void GLAppLayer::GlDebugMessageCallback(GLenum source, GLenum type, GLuint id, G
 		case GL_DEBUG_SOURCE_SHADER_COMPILER: sourceTxt = "SHADER"; break;
 		case GL_DEBUG_SOURCE_THIRD_PARTY:     sourceTxt = "THIRD PARTY"; break;
 		case GL_DEBUG_SOURCE_APPLICATION:     sourceTxt = "APP"; break;
-		case GL_DEBUG_SOURCE_OTHER: default:  sourceTxt = "OTHER"; break;
+		case GL_DEBUG_SOURCE_OTHER: default:  sourceTxt = "OTHER"; break; 
 	}
 
 	switch (severity) {
 		case GL_DEBUG_SEVERITY_LOW:          LOG_INFO("[{}] {}", sourceTxt, message); break;
-		case GL_DEBUG_SEVERITY_MEDIUM:       LOG_WARN("[{}] {}", sourceTxt, message); break;
-		case GL_DEBUG_SEVERITY_HIGH:         LOG_ERROR("[{}] {}", sourceTxt, message); break;
+		case GL_DEBUG_SEVERITY_MEDIUM:       LOG_WARN("[{}] {}", sourceTxt, message); break;  
+		case GL_DEBUG_SEVERITY_HIGH:         LOG_ERROR("[{}] {}", sourceTxt, message); break; 
 			#ifdef LOG_GL_NOTIFICATIONS
 		case GL_DEBUG_SEVERITY_NOTIFICATION: LOG_INFO("[{}] {}", sourceTxt, message); break;
 			#endif

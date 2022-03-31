@@ -39,6 +39,8 @@ public:
 		float u_ZNear;
 		float u_ZFar;
 
+		glm::vec4 u_Viewport;
+
 		// NEW FOR DOF
 
 		// Distance to focus camera to in world units
@@ -146,7 +148,7 @@ protected:
 	UniformBuffer<LightingUboStruct>::Sptr _lightingUbo;
 
 	void _InitFrameUniforms();
-	void _RenderScene(const glm::mat4& view, const glm::mat4&Projection);
+	void _RenderScene(const glm::mat4& view, const glm::mat4&Projection, const glm::ivec2& screenSize);
 
 	void _AccumulateLighting();
 	void _Composite();

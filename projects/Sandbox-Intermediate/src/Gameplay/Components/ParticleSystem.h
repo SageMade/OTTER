@@ -17,7 +17,7 @@ public:
 	void Update();
 	void Render();
 
-	void AddEmitter(const glm::vec3& position, const glm::vec3& direction, float emitRate = 1.0f, const glm::vec4& color = glm::vec4(1.0f));
+	void AddEmitter(const glm::vec3& position, const glm::vec3& direction, float emitRate = 1.0f, const glm::vec4& color = glm::vec4(1.0f), float size = 0.5f);
 
 	// Inherited from IComponent
 
@@ -46,6 +46,8 @@ protected:
 
 	uint32_t _particleBuffers[2];
 	uint32_t _feedbackBuffers[2];
+	uint32_t _updateVaos[2];
+	uint32_t _renderVaos[2];
 	uint32_t _query;
 
 	uint32_t _currentVertexBuffer;

@@ -89,7 +89,7 @@ void ImGuiHelper::Init(GLFWwindow* window) {
 		"layout (location = 0) out vec4 Out_Color;\n"
 		"void main()\n"
 		"{\n"
-		"	float ndc = texture(Texture, Frag_UV.st).r * 2.0 - 1.0;\n"
+		"	float ndc = texelFetch(Texture, ivec2(textureSize(Texture, 9) * Frag_UV.st), 0).r * 2.0 - 1.0;\n"
 		"   float depth = (2 * DepthPlanes.x * DepthPlanes.y) / (DepthPlanes.y + DepthPlanes.x - ndc * (DepthPlanes.y - DepthPlanes.x));\n"
 		"   depth = (depth - DepthPlanes.x) / (DepthPlanes.y - DepthPlanes.x);\n"
 		"   Out_Color = vec4(depth, depth, depth, 1.0);\n"

@@ -37,7 +37,7 @@ nlohmann::json Texture2D::ToJson() const {
 		if (_description.Width * _description.Height > 0 && _description.FormatHint != PixelFormat::Unknown) {
 			size_t dataSize = GetTexelSize(_description.FormatHint, _pixelType) * _description.Width * _description.Height;
 			uint8_t* dataStore = new uint8_t[dataSize];
-			glGetTextureImage(_rendererId, 0, *_description.Format, *_pixelType, dataSize, dataStore);
+			glGetTextureImage(_rendererId, 0, *_description.FormatHint, *_pixelType, dataSize, dataStore);
 			result["data"] = Base64::Encode(dataStore, dataSize);
 		}
 	}
@@ -233,8 +233,14 @@ void Texture2D::_SetTextureParams() {
 		glTextureParameteri(_rendererId, GL_TEXTURE_WRAP_S, (GLenum)_description.HorizontalWrap);
 		glTextureParameteri(_rendererId, GL_TEXTURE_WRAP_T, (GLenum)_description.VerticalWrap);
 
-		glTextureParameteri(_rendererId, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
-		glTextureParameteri(_rendererId, GL_TEXTURE_COMPARE_FUNC, GL_LEQUAL);
+		if (_description.EnableShadowSampling && (
+			_description.Format == InternalFormat::Depth16 ||
+			_description.Format == InternalFormat::Depth24 ||
+			_description.Format == InternalFormat::Depth32)
+		) {
+			glTextureParameteri(_rendererId, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
+			glTextureParameteri(_rendererId, GL_TEXTURE_COMPARE_FUNC, GL_LEQUAL);
+		}
 	}
 }
 

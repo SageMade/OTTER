@@ -6,7 +6,7 @@ extern "C" {
 	__declspec(dllexport) int AmdPowerXpressRequestHighPerformance = 0x01;
 }
 
-int main(int argc, char** args) {
+int main(int argc, char** args) { 
 	Logger::Init();
 
 	// TODO: parse arguments?

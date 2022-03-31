@@ -3,7 +3,7 @@
 #include "Utils/JsonGlmHelpers.h"
 #include "Utils/ImGuiHelper.h"
 #include "../RenderLayer.h"
-#include "../../Week1-Starter/src/Application/Application.h"
+#include "Application/Application.h"
 
 DepthOfField::DepthOfField() :
 	PostProcessingLayer::Effect(),

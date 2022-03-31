@@ -22,9 +22,13 @@ uniform vec2  u_PixelSize;
 
 #include "../../fragments/frame_uniforms.glsl"
 
+float GetDepth(vec2 uv) {
+    return texelFetch(s_Depth, ivec2(uv * textureSize(s_Depth, 0)), 0).r;
+}
+
 void main() {
 
-    float depth = texture(s_Depth, inUV).r;
+    float depth = GetDepth(inUV);
     vec3 norm = texture(s_Normals, inUV).rgb * 2 - 1;
 
     float halfScale = u_Scale * 0.5f;
@@ -36,10 +40,10 @@ void main() {
     vec2 u3 = inUV + vec2(-u_PixelSize.x,  u_PixelSize.y) * ceil(halfScale);
 
     // Grab our depth samples
-    float d0 = texture(s_Depth, u0).r;
-    float d1 = texture(s_Depth, u1).r;
-    float d2 = texture(s_Depth, u2).r;
-    float d3 = texture(s_Depth, u3).r;
+    float d0 = GetDepth(inUV);
+    float d1 = GetDepth(inUV);
+    float d2 = GetDepth(inUV);
+    float d3 = GetDepth(inUV);
 
     // Grab normals
     vec3 n0 = texture(s_Normals, u0).rgb * 2 - 1;
