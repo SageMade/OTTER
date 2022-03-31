@@ -76,8 +76,9 @@ void ParticleSystem::Update()
 	glBindVertexArray(0);
 
 	// Bind the buffer and transform feedback
-	glBindBuffer(GL_ARRAY_BUFFER, _particleBuffers[_currentVertexBuffer]);
 	glBindTransformFeedback(GL_TRANSFORM_FEEDBACK, _feedbackBuffers[_currentFeedbackBuffer]);
+	glBindBuffer(GL_ARRAY_BUFFER, _particleBuffers[_currentFeedbackBuffer]);
+	glBindBufferBase(GL_TRANSFORM_FEEDBACK_BUFFER, 0, _particleBuffers[_currentFeedbackBuffer]);
 
 	// Enable our attributes
 	glEnableVertexAttribArray(0);
@@ -87,7 +88,7 @@ void ParticleSystem::Update()
 	glEnableVertexAttribArray(4); 
 	glEnableVertexAttribArray(5);
 
-	glVertexAttribIPointer(0, 1, GL_UNSIGNED_INT, sizeof(ParticleData), 0); // type
+	glVertexAttribIPointer(0, 1, GL_UNSIGNED_INT, sizeof(ParticleData), (const GLvoid*)offsetof(ParticleData, Type)); // type
 	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(ParticleData), (const GLvoid*)offsetof(ParticleData, Position)); // position
 	glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, sizeof(ParticleData), (const GLvoid*)offsetof(ParticleData, Velocity)); // velocity
 	glVertexAttribPointer(3, 4, GL_FLOAT, GL_FALSE, sizeof(ParticleData), (const GLvoid*)offsetof(ParticleData, Color)); // color 
@@ -113,7 +114,7 @@ void ParticleSystem::Update()
 
 	// End of transform feedback
 	glEndTransformFeedback();
-	glEndQuery(GL_TRANSFORM_FEEDBACK_PRIMITIVES_WRITTEN);
+	glEndQuery(GL_TRANSFORM_FEEDBACK_PRIMITIVES_WRITTEN); 
 
 	// Use our query to get the number of particles
 	glGetQueryObjectuiv(_query, GL_QUERY_RESULT, &_numParticles);
@@ -155,6 +156,8 @@ void ParticleSystem::Render()
 		// Make sure no VAOs are bound
 		glBindVertexArray(0);
 
+		glDisable(GL_DEPTH_TEST);
+
 		glEnablei(GL_BLEND, 0);
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
@@ -165,7 +168,7 @@ void ParticleSystem::Render()
 		glEnableVertexAttribArray(0); 
 		glEnableVertexAttribArray(1);
 		glEnableVertexAttribArray(3);
-		glVertexAttribIPointer(0, 1, GL_UNSIGNED_INT, sizeof(ParticleData), 0); // type
+		glVertexAttribIPointer(0, 1, GL_UNSIGNED_INT, sizeof(ParticleData), (const GLvoid*)offsetof(ParticleData, Type)); // type
 		glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(ParticleData), (const GLvoid*)offsetof(ParticleData, Position)); // position
 		glVertexAttribPointer(3, 4, GL_FLOAT, GL_FALSE, sizeof(ParticleData), (const GLvoid*)offsetof(ParticleData, Color)); // color 
 
@@ -173,8 +176,11 @@ void ParticleSystem::Render()
 		glDrawTransformFeedback(GL_POINTS, _feedbackBuffers[_currentVertexBuffer]);
 
 		// Clean up after ourselves
+		glEnableVertexAttribArray(0);
 		glDisableVertexAttribArray(1);
 		glDisableVertexAttribArray(3);
+
+		glEnable(GL_DEPTH_TEST);
 	}
 }
 

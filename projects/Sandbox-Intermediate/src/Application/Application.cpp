@@ -43,6 +43,7 @@
 #include "Gameplay/Components/SimpleCameraControl.h"
 #include "Gameplay/Components/ParticleSystem.h"
 #include "Gameplay/Components/Light.h"
+#include "Gameplay/Components/ShadowCamera.h"
 
 // GUI
 #include "Gameplay/Components/GUI/RectTransform.h"
@@ -147,18 +148,18 @@ void Application::_Run()
 {
 	// TODO: Register layers
 	_layers.push_back(std::make_shared<GLAppLayer>());
-	_layers.push_back(std::make_shared<DefaultSceneLayer>());
 	_layers.push_back(std::make_shared<LogicUpdateLayer>());
 	_layers.push_back(std::make_shared<RenderLayer>());
 	_layers.push_back(std::make_shared<ParticleLayer>());
 	_layers.push_back(std::make_shared<PostProcessingLayer>());
-	//_layers.push_back(std::make_shared<InstancedRenderingTestLayer>());
 	_layers.push_back(std::make_shared<InterfaceLayer>());
 
 	// If we're in editor mode, we add all the editor layers
 	if (_isEditor) {
 		_layers.push_back(std::make_shared<ImGuiDebugLayer>());
 	}
+
+	_layers.push_back(std::make_shared<DefaultSceneLayer>());
 
 	// Either load the settings, or use the defaults
 	_ConfigureSettings();
@@ -273,6 +274,7 @@ void Application::_RegisterClasses()
 	ComponentManager::RegisterType<GuiText>();
 	ComponentManager::RegisterType<ParticleSystem>();
 	ComponentManager::RegisterType<Light>();
+	ComponentManager::RegisterType<ShadowCamera>();
 }
 
 void Application::_Load() {

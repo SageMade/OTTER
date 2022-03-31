@@ -16,13 +16,18 @@ namespace Gameplay {
 
 		if (_isOrtho) {
 			_isProjectionDirty |= LABEL_LEFT(ImGui::DragFloat, "Ortho Scale", &_orthoVerticalScale, 0.01f, 0.01f);
-		} else {
+		} 
+		else {
 			float fov_deg = glm::degrees(_fovRadians);
 			if (LABEL_LEFT(ImGui::SliderFloat, "FOV (deg) ", &fov_deg, 0.1f, 180.0f)) {
 				_fovRadians = glm::radians(fov_deg);
 				_isProjectionDirty |= true;
 			}
 		}
+
+		LABEL_LEFT(ImGui::DragFloat, "Focal Depth", &FocalDepth, 0.1f, 0.1f, 100.0f);
+		LABEL_LEFT(ImGui::DragFloat, "Lens Dist. ", &LensDepth, 0.01f, 0.001f, 50.0f);
+		LABEL_LEFT(ImGui::DragFloat, "Aperture   ", &Aperture, 0.1f, 0.1f, 60.0f);
 	}
 
 	nlohmann::json Camera::ToJson() const
@@ -112,6 +117,28 @@ namespace Gameplay {
 
 	void Camera::SetClearColor(const glm::vec4& color) {
 		_clearColor = color;
+	}
+
+	float Camera::GetNearPlane() const
+	{
+		return _nearPlane;
+	}
+
+	float Camera::GetFarPlane() const
+	{
+		return _farPlane;
+	}
+
+	void Camera::SetNearPlane(float value)
+	{
+		_nearPlane = value;
+		__CalculateProjection();
+	}
+
+	void Camera::SetFarPlane(float value)
+	{
+		_farPlane = value;
+		__CalculateProjection();
 	}
 
 	const glm::mat4& Camera::__CalculateProjection() const

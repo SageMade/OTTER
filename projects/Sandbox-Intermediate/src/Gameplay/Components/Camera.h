@@ -23,6 +23,10 @@ namespace Gameplay {
 
 		MAKE_TYPENAME(Camera);
 
+		float Aperture   = 20.0f;
+		float LensDepth  = 0.5f;
+		float FocalDepth = 10.0f;
+
 		virtual nlohmann::json ToJson() const override;
 		static Camera::Sptr FromJson(const nlohmann::json& data);
 
@@ -83,6 +87,12 @@ namespace Gameplay {
 
 		const glm::vec4& GetClearColor() const;
 		void SetClearColor(const glm::vec4& color);
+
+		float GetNearPlane() const;
+		float GetFarPlane() const;
+
+		void SetNearPlane(float value);
+		void SetFarPlane(float value);
 
 	protected:
 		float _nearPlane;

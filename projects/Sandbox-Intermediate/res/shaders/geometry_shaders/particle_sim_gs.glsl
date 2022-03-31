@@ -13,12 +13,12 @@ layout (location = 4) in float inLifetime[];
 layout (location = 5) in vec4 inMetadata[];
 
 // Our per-vertex outputs
-out uint out_Type;
-out vec3 out_Position;
-out vec3 out_Velocity;
-out vec4 out_Color;
-out float out_Lifetime;
-out vec4 out_Metadata;
+layout (location = 0) out uint out_Type;
+layout (location = 1) out vec3 out_Position;
+layout (location = 2) out vec3 out_Velocity;
+layout (location = 3) out vec4 out_Color;
+layout (location = 4) out float out_Lifetime;
+layout (location = 5) out vec4 out_Metadata;
 
 #include "../fragments/frame_uniforms.glsl"
 
@@ -96,6 +96,16 @@ void main() {
             }
             break;
         default:
+            out_Type     = inType[0];
+            out_Position = inPosition[0];
+            out_Velocity = inVelocity[0];
+            out_Color    = inColor[0];
+            out_Lifetime = lifetime;
+            out_Metadata = inMetadata[0];
+
+            // Emit into vertex stream
+            EmitVertex();
+            EndPrimitive();
             break;
     }
 }

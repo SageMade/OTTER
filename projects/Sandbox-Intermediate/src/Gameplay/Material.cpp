@@ -300,11 +300,8 @@ namespace Gameplay {
 					case ShaderDataType::Tex2D_Uint: 
 					{
 						Texture2D::Sptr tex = std::dynamic_pointer_cast<Texture2D>(TextureAsset);
-						if (tex != nullptr) {
-							ImGui::Image((ImTextureID)tex->GetHandle(), ImVec2(ImGui::GetTextLineHeight() * 2, ImGui::GetTextLineHeight() * 2));
-							if (ImGuiHelper::ResourceDragTarget<Texture2D>(tex)) {
-								TextureAsset = tex;
-							}
+						if (ImGuiHelper::DrawTextureDrop(tex, ImVec2(ImGui::GetTextLineHeight() * 2, ImGui::GetTextLineHeight() * 2))) {
+							TextureAsset = tex;
 						}
 					}
 						break;

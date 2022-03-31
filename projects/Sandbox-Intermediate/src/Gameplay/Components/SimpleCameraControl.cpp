@@ -25,8 +25,7 @@ void SimpleCameraControl::Update(float deltaTime)
 {
 	if (Application::Get().IsFocused) {
 		if (InputEngine::GetMouseState(GLFW_MOUSE_BUTTON_LEFT) == ButtonState::Pressed) {
-			_prevMousePos = InputEngine::GetMousePos();
-			LOG_INFO("doot");
+			_prevMousePos = InputEngine::GetMousePos();   
 		}
 
 		if (InputEngine::IsMouseButtonDown(GLFW_MOUSE_BUTTON_LEFT)) {

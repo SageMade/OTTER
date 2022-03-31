@@ -22,4 +22,6 @@ public:
 
 protected:
 	ShaderProgram::Sptr _shader;
+	float _strength;
 };
+

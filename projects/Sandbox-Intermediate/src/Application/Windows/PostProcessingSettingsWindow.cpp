@@ -2,6 +2,7 @@
 #include "../Application.h"
 #include "Utils/ImGuiHelper.h"
 #include "imgui_internal.h"
+#include <set>
 
 PostProcessingSettingsWindow::PostProcessingSettingsWindow()
 	: IEditorWindow()
@@ -21,7 +22,9 @@ void PostProcessingSettingsWindow::Render()
 
 	PostProcessingLayer::Sptr layer = app.GetLayer<PostProcessingLayer>();
 
-	for (const auto& effect : layer->GetEffects()) {
+	std::set<PostProcessingLayer::Effect::Sptr> unique (layer->GetEffects().begin(), layer->GetEffects().end());
+
+	for (const auto& effect : unique) {
 		_RenderEffect(effect);
 	}
 }
