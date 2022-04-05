@@ -20,10 +20,7 @@ layout (std140, binding = 0) uniform b_FrameLevelUniforms {
     uniform float u_ZNear;
     // Camera's far plane
     uniform float u_ZFar;
-
-    // New for fun, the viewport rectangle on the output (x, y, w, h)
-    uniform vec4 u_Viewport;
-
+    
     // NEW FOR DOF
 
     // Distance to focus camera to in world units
@@ -32,6 +29,10 @@ layout (std140, binding = 0) uniform b_FrameLevelUniforms {
     uniform float u_LensDepth;
     // Aperture (inverse of F-Stop)
     uniform float u_Aperture;
+
+    // New for fun, the viewport rectangle on the output (x, y, w, h)
+    uniform vec4 u_Viewport;
+
 };
 
 // Stores uniforms that change every object/instance

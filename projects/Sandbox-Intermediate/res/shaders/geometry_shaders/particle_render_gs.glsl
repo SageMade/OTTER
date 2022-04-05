@@ -6,11 +6,13 @@ layout (triangle_strip, max_vertices = 4) out;
 // Define inputs to match the vertex shader
 layout (location = 0) in vec4 inFragColor[];
 layout (location = 1) in flat uint inType[];
-layout (location = 2) in vec3 inPosition[];
-layout (location = 3) in vec4  inMetaData[];
+layout (location = 2) in flat uint inTexID[];
+layout (location = 3) in vec3 inPosition[];
+layout (location = 4) in vec4  inMetaData[];
 
 layout (location = 0) out vec4 outFragColor;
 layout (location = 1) out vec2 outUV;
+layout (location = 2) out flat uint outTexID;
 
 #include "../fragments/frame_uniforms.glsl"
 
@@ -40,6 +42,7 @@ void main() {
     );
 
     outFragColor = inFragColor[0];
+    outTexID = inTexID[0];
 
     vec3 tl = inPosition[0] - ( right + up ) * size / 2;
     vec3 tr = inPosition[0] - ( right - up ) * size / 2;

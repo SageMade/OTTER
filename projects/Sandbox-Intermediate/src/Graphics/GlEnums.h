@@ -29,7 +29,8 @@ ENUM(TextureType, GLenum,
 	_2D            = GL_TEXTURE_2D,
 	_3D            = GL_TEXTURE_3D,
 	Cubemap        = GL_TEXTURE_CUBE_MAP,
-	_2DMultisample = GL_TEXTURE_2D_MULTISAMPLE
+	_2DMultisample = GL_TEXTURE_2D_MULTISAMPLE,
+	_2DArray = GL_TEXTURE_2D_ARRAY
 )
 
 // https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/glTexImage2D.xhtml

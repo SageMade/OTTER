@@ -39,16 +39,18 @@ public:
 		float u_ZNear;
 		float u_ZFar;
 
-		glm::vec4 u_Viewport;
-
 		// NEW FOR DOF
-
+		// 
 		// Distance to focus camera to in world units
 		float u_FocalDepth = 5.0f;
 		// Distance from lense to sensor in world units
 		float u_LensDepth = 0.1f;
 		// Aperture (inverse of F-Stop)
 		float u_Aperture = 20.0f;
+
+		glm::vec4 u_Viewport;
+
+
 	};
 
 	// Structure for our instance-level uniforms, matches layout from

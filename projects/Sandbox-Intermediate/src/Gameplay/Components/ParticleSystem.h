@@ -1,6 +1,7 @@
 #pragma once
 #include "Gameplay/Components/IComponent.h"
 #include "Graphics/ShaderProgram.h"
+#include "Graphics/Textures/Texture2DArray.h"
 
 ENUM(ParticleType, uint32_t,
 	Emitter       = 0,
@@ -17,6 +18,8 @@ public:
 	void Update();
 	void Render();
 
+	Texture2DArray::Sptr Atlas;
+
 	void AddEmitter(const glm::vec3& position, const glm::vec3& direction, float emitRate = 1.0f, const glm::vec4& color = glm::vec4(1.0f), float size = 0.5f);
 
 	// Inherited from IComponent
@@ -30,6 +33,7 @@ public:
 protected:
 	struct ParticleData {
 		ParticleType Type;     // uint32_t, 0 for emitters, 1 for particles
+		uint32_t     TexID;
 		glm::vec3    Position;
 		glm::vec3    Velocity; // For emitters, this is initial velocity
 		glm::vec4    Color;
@@ -37,6 +41,7 @@ protected:
 
 		// For emitters, x is time to next particle, y is max deviation from direction in radians, z-w is lifetime range
 		glm::vec4    Metadata;
+		glm::vec4    Metadata2;
 	};
 
 	bool _hasInit;

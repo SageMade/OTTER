@@ -17,6 +17,7 @@
 #include "Graphics/ShaderProgram.h"
 #include "Graphics/Textures/Texture2D.h"
 #include "Graphics/Textures/TextureCube.h"
+#include "Graphics/Textures/Texture2DArray.h"
 #include "Graphics/VertexTypes.h"
 #include "Graphics/Font.h"
 #include "Graphics/GuiBatcher.h"
@@ -591,8 +592,8 @@ void DefaultSceneLayer::_CreateScene()
 		}
 
 		/////////////////////////// UI //////////////////////////////
-		/*
-		GameObject::Sptr canvas = scene->CreateGameObject("UI Canvas");
+		
+		GameObject::Sptr canvas = scene->CreateGameObject("UI Canvas"); 
 		{
 			RectTransform::Sptr transform = canvas->Add<RectTransform>();
 			transform->SetMin({ 16, 16 });
@@ -624,11 +625,12 @@ void DefaultSceneLayer::_CreateScene()
 
 			canvas->AddChild(subPanel);
 		}
-		*/
+		
 
-		GameObject::Sptr particles = scene->CreateGameObject("Particles");
+		GameObject::Sptr particles = scene->CreateGameObject("Particles"); 
 		{
 			ParticleSystem::Sptr particleManager = particles->Add<ParticleSystem>();  
+			particleManager->Atlas = ResourceManager::CreateAsset<Texture2DArray>("textures/particles.png", 2, 2);
 			particleManager->AddEmitter(glm::vec3(0.0f), glm::vec3(0.0f, -1.0f, 10.0f), 10.0f, glm::vec4(0.0f, 1.0f, 0.0f, 1.0f)); 
 		}
 

@@ -2,11 +2,13 @@
 
 layout (location = 0) in vec4 fragColor;
 layout (location = 1) in vec2 inUv;
+layout (location = 2) in flat uint inTexId;
 
 layout(location = 0) out vec4 outColor;
 
-void main() { 
+uniform layout(location = 0) sampler2DArray s_Textures;
 
-	outColor = fragColor;
+void main() { 
+	outColor = fragColor * texture(s_Textures, vec3(inUv, inTexId));
 }
 

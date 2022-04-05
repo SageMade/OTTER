@@ -72,13 +72,17 @@ void ParticleSystem::Update()
 			glEnableVertexAttribArray(3);
 			glEnableVertexAttribArray(4);
 			glEnableVertexAttribArray(5);
+			glEnableVertexAttribArray(6);
+			glEnableVertexAttribArray(7);
 
 			glVertexAttribIPointer(0, 1, GL_UNSIGNED_INT, sizeof(ParticleData), (const GLvoid*)offsetof(ParticleData, Type)); // type
-			glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(ParticleData), (const GLvoid*)offsetof(ParticleData, Position)); // position
-			glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, sizeof(ParticleData), (const GLvoid*)offsetof(ParticleData, Velocity)); // velocity
-			glVertexAttribPointer(3, 4, GL_FLOAT, GL_FALSE, sizeof(ParticleData), (const GLvoid*)offsetof(ParticleData, Color)); // color 
-			glVertexAttribPointer(4, 1, GL_FLOAT, GL_FALSE, sizeof(ParticleData), (const GLvoid*)offsetof(ParticleData, Lifetime)); // metadata 
-			glVertexAttribPointer(5, 4, GL_FLOAT, GL_FALSE, sizeof(ParticleData), (const GLvoid*)offsetof(ParticleData, Metadata)); // metadata 
+			glVertexAttribIPointer(1, 1, GL_UNSIGNED_INT, sizeof(ParticleData), (const GLvoid*)offsetof(ParticleData, TexID)); // tex ID
+			glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, sizeof(ParticleData), (const GLvoid*)offsetof(ParticleData, Position)); // position
+			glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, sizeof(ParticleData), (const GLvoid*)offsetof(ParticleData, Velocity)); // velocity
+			glVertexAttribPointer(4, 4, GL_FLOAT, GL_FALSE, sizeof(ParticleData), (const GLvoid*)offsetof(ParticleData, Color)); // color 
+			glVertexAttribPointer(5, 1, GL_FLOAT, GL_FALSE, sizeof(ParticleData), (const GLvoid*)offsetof(ParticleData, Lifetime)); // metadata 
+			glVertexAttribPointer(6, 4, GL_FLOAT, GL_FALSE, sizeof(ParticleData), (const GLvoid*)offsetof(ParticleData, Metadata)); // metadata 
+			glVertexAttribPointer(7, 4, GL_FLOAT, GL_FALSE, sizeof(ParticleData), (const GLvoid*)offsetof(ParticleData, Metadata2)); // metadata 
 
 
 			glBindVertexArray(_renderVaos[ix]);
@@ -87,12 +91,16 @@ void ParticleSystem::Update()
 			// Enable type, position and color 
 			glEnableVertexAttribArray(0);
 			glEnableVertexAttribArray(1);
-			glEnableVertexAttribArray(3); 
-			glEnableVertexAttribArray(5);
+			glEnableVertexAttribArray(2);
+			glEnableVertexAttribArray(4); 
+			glEnableVertexAttribArray(6);
+			glEnableVertexAttribArray(7);
 			glVertexAttribIPointer(0, 1, GL_UNSIGNED_INT, sizeof(ParticleData), (const GLvoid*)offsetof(ParticleData, Type)); // type
-			glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(ParticleData), (const GLvoid*)offsetof(ParticleData, Position)); // position
-			glVertexAttribPointer(3, 4, GL_FLOAT, GL_FALSE, sizeof(ParticleData), (const GLvoid*)offsetof(ParticleData, Color)); // color 
-			glVertexAttribPointer(5, 4, GL_FLOAT, GL_FALSE, sizeof(ParticleData), (const GLvoid*)offsetof(ParticleData, Metadata)); // metadata 
+			glVertexAttribIPointer(1, 1, GL_UNSIGNED_INT, sizeof(ParticleData), (const GLvoid*)offsetof(ParticleData, TexID)); // type
+			glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, sizeof(ParticleData), (const GLvoid*)offsetof(ParticleData, Position)); // position
+			glVertexAttribPointer(4, 4, GL_FLOAT, GL_FALSE, sizeof(ParticleData), (const GLvoid*)offsetof(ParticleData, Color)); // color 
+			glVertexAttribPointer(6, 4, GL_FLOAT, GL_FALSE, sizeof(ParticleData), (const GLvoid*)offsetof(ParticleData, Metadata)); // metadata 
+			glVertexAttribPointer(7, 4, GL_FLOAT, GL_FALSE, sizeof(ParticleData), (const GLvoid*)offsetof(ParticleData, Metadata)); // metadata 
 		}
 
 		glBindVertexArray(0);
@@ -164,6 +172,10 @@ void ParticleSystem::Render()
 	// Make sure that we've actually initialized our stuff
 	if (_hasInit) {
 
+		if (Atlas != nullptr) {
+			Atlas->Bind(0);
+		}
+
 		// We're using our particle rendering shader
 		_renderShader->Bind();
 
@@ -173,8 +185,8 @@ void ParticleSystem::Render()
 		//glDisable(GL_DEPTH_TEST);
 		
 		glDisable(GL_BLEND);
-		//glEnablei(GL_BLEND, 0);
-		//glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		glEnablei(GL_BLEND, 0);
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
 		// Bind the current feedback buffer as our drawing buffer
 		glBindBuffer(GL_ARRAY_BUFFER, _particleBuffers[_currentVertexBuffer]); 
@@ -260,20 +272,22 @@ void ParticleSystem::RenderImGui()
 void ParticleSystem::Awake() 
 {
 	// There are the things we want the feedback buffers to track
-	const char const* varyings[6] = {
-		"out_Type",  
+	const char const* varyings[8] = {
+		"out_Type",
+		"out_TexID",
 		"out_Position",
 		"out_Velocity",
 		"out_Color", 
 		"out_Lifetime",
-		"out_Metadata" 
+		"out_Metadata",
+		"out_Metadata2"
 	}; 
 
 	// This is our transform feedback shader
 	_updateShader = ShaderProgram::Create();
 	_updateShader->LoadShaderPartFromFile("shaders/vertex_shaders/particles_sim_vs.glsl", ShaderPartType::Vertex);
  	_updateShader->LoadShaderPartFromFile("shaders/geometry_shaders/particle_sim_gs.glsl", ShaderPartType::Geometry);
-	_updateShader->RegisterVaryings(varyings, 6, true); // Here we call glTransformFeedbackVaryings, and let it know we want interleaved data
+	_updateShader->RegisterVaryings(varyings, 8, true); // Here we call glTransformFeedbackVaryings, and let it know we want interleaved data
 	_updateShader->Link(); 
 
 	// This shader will render the particles
@@ -287,7 +301,8 @@ void ParticleSystem::Awake()
 nlohmann::json ParticleSystem::ToJson() const {
 	nlohmann::json result = {
 		{ "gravity", _gravity },
-		{ "max_particles", _maxParticles }
+		{ "max_particles", _maxParticles },
+		{ "atlas", Atlas ? Atlas->GetGUID().str() : "null" }
 	};
 
 	// Add emitters to the JSON data
@@ -312,6 +327,7 @@ ParticleSystem::Sptr ParticleSystem::FromJson(const nlohmann::json& blob) {
 
 	result->_gravity = JsonGet(blob, "gravity", result->_gravity);
 	result->_maxParticles = JsonGet(blob, "max_particled", result->_maxParticles);
+	result->Atlas = ResourceManager::Get<Texture2DArray>(Guid(JsonGet<std::string>(blob, "atlas", "null")));
 
 	if (blob.contains("emitters") && blob["emitters"].is_array()) {
 		for (const auto& data : blob["emitters"]) {
