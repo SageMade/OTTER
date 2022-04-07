@@ -4,8 +4,11 @@
 #include "Graphics/Textures/Texture2DArray.h"
 
 ENUM(ParticleType, uint32_t,
-	Emitter       = 0,
-	Particle      = 1
+	StreamEmitter = 0,
+	SphereEmitter = 1,
+	BoxEmitter    = 2,
+	ConeEmitter   = 3,
+	Particle      = 1 << 17
 );
 
 class ParticleSystem : public Gameplay::IComponent{
@@ -32,7 +35,7 @@ public:
 
 protected:
 	struct ParticleData {
-		ParticleType Type;     // uint32_t, 0 for emitters, 1 for particles
+		ParticleType Type;     // uint32_t, lower 16 bits for emitters, upper 16 for particles
 		uint32_t     TexID;
 		glm::vec3    Position;
 		glm::vec3    Velocity; // For emitters, this is initial velocity
@@ -45,6 +48,7 @@ protected:
 	};
 
 	bool _hasInit;
+	bool _needsUpload;
 
 	uint32_t _maxParticles;
 	GLuint _numParticles;

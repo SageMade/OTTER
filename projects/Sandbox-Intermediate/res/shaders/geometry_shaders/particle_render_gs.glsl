@@ -19,9 +19,12 @@ layout (location = 2) out flat uint outTexID;
 #define TYPE_EMITTER 0
 #define TYPE_PARTICLE 1
 
+const uint EMITTER_MASK = 0x0000FFFF;
+
 void main() {
     
-	if (inType[0] == TYPE_EMITTER) {
+    // If the particle type is an emitter, we can skip it
+	if ((inType[0] & EMITTER_MASK) != 0) {
 		return;
 	}
 

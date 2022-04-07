@@ -10,5 +10,8 @@ uniform layout(location = 0) sampler2DArray s_Textures;
 
 void main() { 
 	outColor = fragColor * texture(s_Textures, vec3(inUv, inTexId));
+	if (outColor.a < 0.5) {
+		discard;
+	}
 }
 

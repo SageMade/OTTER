@@ -34,6 +34,11 @@ void HierarchyWindow::Render()
 
 void HierarchyWindow::_RenderObjectNode(Gameplay::GameObject::Sptr object, int depth) {
 	using namespace Gameplay;
+	if (object == nullptr) {
+		return;
+	}
+
+	object->_PurgeDeletedChildren();
 
 	if (object->HideInHierarchy) {
 		return;

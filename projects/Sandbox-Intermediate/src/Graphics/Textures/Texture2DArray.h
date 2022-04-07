@@ -111,6 +111,8 @@ public:
 	/// </summary>
 	WrapMode GetWrapT() const { return _description.VerticalWrap; }
 
+	int GetLevels() const;
+
 	/// <summary>
 	/// Gets the minification filter that the texture is using
 	/// </summary>

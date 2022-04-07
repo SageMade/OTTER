@@ -102,6 +102,10 @@ Texture2DArray::Texture2DArray(const std::string& filePath, uint32_t splitX, uin
 	_LoadDataFromFile();
 }
 
+int Texture2DArray::GetLevels() const {
+	return _description.XDivisions * _description.YDivisions;
+}
+
 void Texture2DArray::SetMinFilter(MinFilter value) {
 	_description.MinificationFilter = value;
 	glTextureParameteri(_rendererId, GL_TEXTURE_MIN_FILTER, *_description.MinificationFilter);

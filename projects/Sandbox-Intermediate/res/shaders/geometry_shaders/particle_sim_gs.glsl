@@ -25,14 +25,21 @@ out vec4 out_Metadata;
 out vec4 out_Metadata2;
 
 #include "../fragments/frame_uniforms.glsl"
+#include "../fragments/random.glsl"
 
 // Uniforms
 uniform vec3  u_Gravity;
 
 uniform mat4 u_ModelMatrix;
 
-#define TYPE_EMITTER 0
-#define TYPE_PARTICLE 1
+#define TYPE_EMITTER_STREAM 0
+#define TYPE_EMITTER_SPHERE 1
+#define TYPE_EMITTER_BOX 2
+#define TYPE_EMITTER_CONE 3
+#define TYPE_PARTICLE (1 << 17)
+
+#define EMITTER_MASK 0x0000FFFF
+#define PARTICLE_MASK 0x0000FFFF
 
 // See https://thebookofshaders.com/10/
 // Returns a random number between 0 and 1
@@ -40,53 +47,119 @@ float rand(vec2 seed) {
     return fract(sin(dot(seed, vec2(12.9898, 78.233) * 43758.5453123)));
 }
 
+vec3 point_on_sphere(inout uint seed) {
+    float z = random(u_Time + 1) * 2 - 1;
+    float rxy = sqrt(1 - z * z);
+    float phi = random(u_Time + 2) * 6.28318530718;
+    return vec3(rxy * cos(phi), rxy * sin(phi), z);
+}
+
+void prep_emitter(out float startLife, out int toEmit) {
+    float lifetime = inLifetime[0] - u_DeltaTime;
+    int emitted = 1;
+    vec4 meta = inMetadata[0];
+    startLife = lifetime;
+    toEmit = 0;
+    
+    while ((lifetime < 0) && (emitted < 32)) {
+        lifetime += meta.x;
+        toEmit ++;
+        emitted++;
+    }
+
+    // Push the emitter back into the output stream
+    out_Type     = inType[0];
+    out_TexID    = inTexID[0];
+    out_Position = inPosition[0];
+    out_Velocity = inVelocity[0];
+    out_Color    = inColor[0];
+    out_Lifetime = lifetime;
+    out_Metadata = inMetadata[0];
+    out_Metadata2 = inMetadata2[0];
+    
+    EmitVertex();
+    EndPrimitive();
+}
+
+void emit_stream() {
+    float startLife;
+    int toEmit;
+    vec4 meta = inMetadata[0];
+    vec4 meta2 = inMetadata2[0];
+
+    prep_emitter(startLife, toEmit);
+
+    // If the lifetime is at 0, we emit a particle
+    for (int ix = 0; ix < toEmit; ix++) {
+        float timeAdjust = (-startLife + (ix * meta.x));
+        out_Type = TYPE_PARTICLE;
+        out_TexID = inTexID[0];
+        out_Position = (u_ModelMatrix * vec4(inPosition[0] + inVelocity[0] * timeAdjust, 1.0f)).xyz;
+        out_Velocity = mat3(u_ModelMatrix) * inVelocity[0];
+
+        float lifeScale = rand(mod(vec2(u_DeltaTime, u_Time), vec2(1,1)));
+        out_Lifetime = meta.z + (meta.w - meta.z) * lifeScale;
+
+        float sizeScale = rand(mod(vec2(u_Time, u_DeltaTime), vec2(1,1)));
+        out_Metadata = vec4(out_Lifetime, meta.y + (meta2.y - meta.x) * sizeScale, 0, 0);
+        
+        out_Metadata2 = vec4(0);
+        out_Color    = inColor[0];
+        
+        EmitVertex();
+        EndPrimitive();
+    }
+}
+
+void emit_sphere() {
+    float startLife;
+    int toEmit;
+    vec4 meta = inMetadata[0];
+    vec4 meta2 = inMetadata2[0];
+
+    uint seed = uint(u_Time + u_DeltaTime);
+
+    prep_emitter(startLife, toEmit);
+
+    // If the lifetime is at 0, we emit a particle
+    for (int ix = 0; ix < toEmit; ix++) {
+        float timeAdjust = (-startLife + (ix * meta.x));
+        out_Type = TYPE_PARTICLE;
+        out_TexID = inTexID[0];
+
+        vec3 targetVelocity = point_on_sphere(seed);
+        vec3 targetPos = targetVelocity * random(u_Time + 3);
+
+        out_Position = (u_ModelMatrix * vec4(inPosition[0] + targetPos + targetVelocity *inVelocity[0].x * timeAdjust, 1.0f)).xyz;
+        out_Velocity = mat3(u_ModelMatrix) * targetVelocity * inVelocity[0].x;
+
+        float lifeScale = rand(mod(vec2(u_DeltaTime, u_Time), vec2(1,1)));
+        out_Lifetime = meta.z + (meta.w - meta.z) * lifeScale;
+
+        float sizeScale = rand(mod(vec2(u_Time, u_DeltaTime), vec2(1,1)));
+        out_Metadata = vec4(out_Lifetime, meta.y + (meta2.y - meta.x) * sizeScale, 0, 0);
+
+        out_Metadata2 = vec4(0);
+        out_Color    = inColor[0];
+        
+        EmitVertex();
+        EndPrimitive();
+    }
+}
+
 void main() {
     float lifetime = inLifetime[0] - u_DeltaTime;
     vec4 meta = inMetadata[0];
 
+
     switch (inType[0]) {
         // Handling emitters
-        case TYPE_EMITTER:
-            int emitted = 1;
+        case TYPE_EMITTER_STREAM:
+            emit_stream();
+            return;
 
-            float startLife = lifetime;
-            int toEmit = 0;
-            
-            while ((lifetime < 0) && (emitted < 32)) {
-                lifetime += meta.x;
-                toEmit ++;
-                emitted++;
-            }
-
-            // Push the emitter back into the output stream
-            out_Type     = TYPE_EMITTER;
-            out_TexID    = inTexID[0];
-            out_Position = inPosition[0];
-            out_Velocity = inVelocity[0];
-            out_Color    = inColor[0];
-            out_Lifetime = lifetime;
-            out_Metadata = inMetadata[0];
-            out_Metadata2 = inMetadata2[0];
-            
-            EmitVertex();
-            EndPrimitive();
-
-            // If the lifetime is at 0, we emit a particle
-            for (int ix = 0; ix < toEmit; ix++) {
-                float timeAdjust = (-startLife + (ix * meta.x));
-                out_Type = TYPE_PARTICLE;
-                out_TexID = inTexID[0];
-                out_Position = (u_ModelMatrix * vec4(inPosition[0] + inVelocity[0] * timeAdjust, 1.0f)).xyz;
-                out_Velocity = mat3(u_ModelMatrix) * inVelocity[0];
-                out_Lifetime = meta.z + (meta.w - meta.z) * rand(vec2(inPosition[0].x, u_DeltaTime));
-                out_Metadata = vec4(out_Lifetime, meta.y, 0, 0);
-                out_Metadata2 = vec4(0);
-                out_Color    = inColor[0];
-                
-                EmitVertex();
-                EndPrimitive();
-            }
-
+        case TYPE_EMITTER_SPHERE:
+            emit_sphere();
             return;
 
         // Handling particles
