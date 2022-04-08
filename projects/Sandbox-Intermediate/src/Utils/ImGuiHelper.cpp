@@ -161,6 +161,53 @@ void ImGuiHelper::HeaderCheckbox(ImGuiID headerId, bool* value)
 	last_item_backup.Restore();
 }
 
+bool VertArrowEx(ImGuiID id, ImVec2 pos, bool positive, int* value) {
+	ImGuiWindow* window = ImGui::GetCurrentWindow();
+	ImGuiContext& g = *GImGui;
+	ImGuiStyle& style = g.Style;
+
+	const float square_sz = ImGui::GetFrameHeight();
+	const ImRect total_bb(pos, ImVec2(pos.x + square_sz, pos.y + square_sz));
+
+	bool hovered, held;
+	bool pressed = ImGui::ButtonBehavior(total_bb, id, &hovered, &held);
+	if (pressed)
+	{
+		*value = positive ? -1 : 1;
+		ImGui::MarkItemEdited(id);
+	}
+
+	ImGui::RenderNavHighlight(total_bb, id);
+	ImGui::RenderFrame(total_bb.Min, total_bb.Max, ImGui::GetColorU32((held && hovered) ? ImGuiCol_FrameBgActive : hovered ? ImGuiCol_FrameBgHovered : ImGuiCol_FrameBg), true, style.FrameRounding);
+	ImU32 check_col = ImGui::GetColorU32(ImGuiCol_CheckMark);
+
+	const float pad = ImMax(1.0f, (float)(int)(square_sz / 6.0f));
+	ImGui::RenderArrow(ImVec2(pos.x + pad, pos.y + pad), positive ? ImGuiDir_::ImGuiDir_Up : ImGuiDir_Down);
+
+	return pressed;
+}
+
+bool ImGuiHelper::HeaderMoveButtons(ImGuiID headerId, int* delta)
+{
+	if (delta != nullptr) {
+		*delta = 0;
+	}
+
+	bool result = false;
+
+	ImGuiWindow* window = ImGui::GetCurrentWindow();
+	ImGuiContext& g = *GImGui;
+	ImGuiItemHoveredDataBackup last_item_backup;
+	float button_size = g.FontSize;
+	float button_x = ImMax(window->DC.LastItemRect.Min.x, window->DC.LastItemRect.Max.x - g.Style.FramePadding.x * 2.0f - (button_size * 2.0f));
+	float button_y = window->DC.LastItemRect.Min.y;
+	result |= VertArrowEx(window->GetID((void*)((intptr_t)headerId + 1)), ImVec2(button_x, button_y), true, delta);
+	result |= VertArrowEx(window->GetID((void*)((intptr_t)headerId + 2)), ImVec2(button_x + button_size, button_y), false, delta);
+	last_item_backup.Restore();
+
+	return result;
+}
+
 bool ImGuiHelper::DrawTextureDrop(Texture2D::Sptr& image, ImVec2 size)
 {
 	if (image != nullptr) {

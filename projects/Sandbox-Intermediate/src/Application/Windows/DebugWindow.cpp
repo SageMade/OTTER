@@ -24,7 +24,7 @@ void DebugWindow::RenderMenuBar()
 		app.CurrentScene()->SetPhysicsDebugDrawMode(physicsDrawMode);
 	}
 
-	ImGui::Separator();
+	/*ImGui::Separator();
 
 	RenderFlags flags = renderLayer->GetRenderFlags();
 	bool changed = false;
@@ -36,5 +36,5 @@ void DebugWindow::RenderMenuBar()
 
 	if (changed) {
 		renderLayer->SetRenderFlags(flags);
-	}
+	}*/
 }

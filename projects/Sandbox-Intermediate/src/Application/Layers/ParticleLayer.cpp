@@ -36,11 +36,10 @@ void ParticleLayer::OnPostRender()
 	const glm::uvec4& viewport = app.GetPrimaryViewport();
 
 	// Restore viewport to game viewport
-
-	//RenderLayer::Sptr renderer = app.GetLayer<RenderLayer>();
-	//const Framebuffer::Sptr renderOutput = renderer->GetRenderOutput();
-	//renderOutput->Bind();
-	//glViewport(0, 0, renderOutput->GetWidth(), renderOutput->GetHeight());
+	RenderLayer::Sptr renderer = app.GetLayer<RenderLayer>();
+	const Framebuffer::Sptr renderOutput = renderer->GetRenderOutput();
+	renderOutput->Bind();
+	glViewport(0, 0, renderOutput->GetWidth(), renderOutput->GetHeight());
 
 	Application::Get().CurrentScene()->Components().Each<ParticleSystem>([](const ParticleSystem::Sptr& system) {
 		if (system->IsEnabled) {

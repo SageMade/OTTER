@@ -128,7 +128,7 @@ void DebugDrawer::FlushTris()
 	}
 }
 
-void DebugDrawer::DrawCircle(const glm::vec3& pos, const glm::vec3& n, float radius, int segments /*= 24*/)
+void DebugDrawer::DrawWireCircle(const glm::vec3& pos, const glm::vec3& n, float radius, int segments /*= 24*/)
 {
 	glm::vec3 norm = glm::normalize(n);
 
@@ -136,7 +136,7 @@ void DebugDrawer::DrawCircle(const glm::vec3& pos, const glm::vec3& n, float rad
 	if (glm::dot(x, norm) > 0.001f) {
 		x = glm::vec3(-norm.z, norm.x, norm.y);
 	}
-	glm::vec3 y = glm::normalize(glm::cross(n, x));
+	glm::vec3 y = glm::normalize(glm::cross(norm, x));
 
 	float step = glm::two_pi<float>() / segments;
 	for (int ix = 0; ix <= segments; ix++) {
@@ -170,6 +170,28 @@ void DebugDrawer::DrawWireCube(const glm::vec3& center, const glm::vec3& halfExt
 	DrawLine(glm::vec3(x1, y1, z2), glm::vec3(x2, y1, z2));
 	DrawLine(glm::vec3(x1, y2, z1), glm::vec3(x2, y2, z1));
 	DrawLine(glm::vec3(x1, y2, z2), glm::vec3(x2, y2, z2));
+}
+
+void DebugDrawer::DrawWireCone(const glm::vec3& origin, const glm::vec3& extents, float angleDeg, int segments)
+{
+	float length = glm::length(extents);
+	float radius = glm::tan(glm::radians(angleDeg)) * length;
+	DrawWireCircle(origin + extents, glm::normalize(extents), radius, segments);
+
+	glm::vec3 norm = glm::normalize(extents);
+
+	glm::vec3 x = glm::vec3(-norm.y, norm.x, norm.z);
+	if (glm::dot(x, norm) > 0.001f) {
+		x = glm::vec3(-norm.z, norm.x, norm.y);
+	}
+	glm::vec3 y = glm::normalize(glm::cross(norm, x));
+
+	float step = glm::two_pi<float>() / (segments / 2);
+	for (int ix = 0; ix <= segments / 2; ix++) {
+		glm::vec3 p1 = origin;
+		glm::vec3 p2 = (origin + extents) + (glm::cos((ix + 1) * step) * x + glm::sin((ix + 1) * step) * y) * radius;
+		DrawLine(p1, p2);
+	}
 }
 
 void DebugDrawer::FlushAll()

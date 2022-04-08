@@ -115,8 +115,9 @@ public:
 	/// </summary>
 	void FlushTris();
 
-	void DrawCircle(const glm::vec3& pos, const glm::vec3 & n, float radius, int segments = 24);
+	void DrawWireCircle(const glm::vec3& pos, const glm::vec3 & n, float radius, int segments = 24);
 	void DrawWireCube(const glm::vec3 & center, const glm::vec3 & halfExtents);
+	void DrawWireCone(const glm::vec3 & origin, const glm::vec3 & extents, float angleDeg, int segments = 24);
 
 	/// <summary>
 	/// Flushes any remaining triangles and lines, drawing them to the screen and resetting their counters

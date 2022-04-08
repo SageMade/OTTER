@@ -102,6 +102,8 @@ public:
 
 	static void HeaderCheckbox(ImGuiID headerId, bool* value);
 
+	static bool HeaderMoveButtons(ImGuiID headerId, int* delta);
+
 protected:
 	ImGuiHelper() = default;
 

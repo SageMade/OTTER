@@ -42,3 +42,7 @@ const float PHI = 1.61803398874989484820459;  // Φ = Golden Ratio
 float golden_noise(vec2 xy, float seed) {
     return fract(tan(distance(xy * PHI, xy) * seed) * xy.x);
 }
+
+float random_range(float minV, float maxV, float seed) {
+    return minV + (random(seed) * (maxV - minV));
+}

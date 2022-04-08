@@ -47,7 +47,7 @@ float rand(vec2 seed) {
     return fract(sin(dot(seed, vec2(12.9898, 78.233) * 43758.5453123)));
 }
 
-vec3 point_on_sphere(inout uint seed) {
+vec3 point_on_sphere() {
     float z = random(u_Time + 1) * 2 - 1;
     float rxy = sqrt(1 - z * z);
     float phi = random(u_Time + 2) * 6.28318530718;
@@ -168,7 +168,50 @@ void emit_sphere() {
     vec2 lifeRange = meta.zw;
     vec2 sizeRange = meta2.xy;
 
-    uint seed = uint(u_Time + u_DeltaTime);
+    prep_emitter(startLife, toEmit);
+
+    // If the lifetime is at 0, we emit a particle
+    for (int ix = 0; ix < toEmit; ix++) {
+        float timeAdjust = (-startLife + (ix * meta.x));
+        out_Type = TYPE_PARTICLE;
+        out_TexID = inTexID[0];
+
+        vec3 targetVelocity = point_on_sphere();
+        vec3 targetPos = targetVelocity * random(u_Time + 3) * radius;
+
+        out_Position = (u_ModelMatrix * vec4(inPosition[0] + targetPos + velocity * timeAdjust, 1.0f)).xyz;
+        out_Velocity = mat3(u_ModelMatrix) * targetVelocity * velocity;
+
+        float lifeScale = rand(mod(vec2(u_DeltaTime, u_Time), vec2(1,1)));
+        out_Lifetime = lifeRange.x + (lifeRange.y - lifeRange.x) * lifeScale;
+
+        float sizeScale = rand(mod(vec2(u_Time, u_DeltaTime), vec2(1,1)));
+        out_Metadata = vec4(out_Lifetime, sizeRange.x + (sizeRange.y - sizeRange.x) * sizeScale, 0, 0);
+
+        out_Metadata2 = vec4(0);
+        out_Color    = inColor[0];
+        
+        EmitVertex();
+        EndPrimitive();
+    }
+}
+
+void emit_cone() {
+    float startLife;
+    int toEmit;
+    vec4 meta = inMetadata[0];
+    vec4 meta2 = inMetadata2[0];
+
+    vec3 vOrigin = normalize(inVelocity[0]);
+    float angle  = meta.y;
+    vec2 lifeRange = meta.zw;
+    vec2 sizeRange = meta2.xy;
+    
+    vec3 crossX = vec3(-vOrigin.z, vOrigin.x, vOrigin.y);
+    if (dot(crossX, vOrigin) > 0.001) {
+        crossX = vec3(-vOrigin.y, vOrigin.x, vOrigin.z);
+    }
+    vec3 crossY = cross(vOrigin, crossX);
 
     prep_emitter(startLife, toEmit);
 
@@ -178,11 +221,14 @@ void emit_sphere() {
         out_Type = TYPE_PARTICLE;
         out_TexID = inTexID[0];
 
-        vec3 targetVelocity = point_on_sphere(seed);
-        vec3 targetPos = targetVelocity * random(u_Time + 3) * radius;
+        float theta = acos(random_range(cos(angle), 1, u_Time + 2));
+        float phi   = random_range(0.0, 6.28318530718, u_Time + 3);
 
-        out_Position = (u_ModelMatrix * vec4(inPosition[0] + targetPos + targetVelocity * velocity * timeAdjust, 1.0f)).xyz;
-        out_Velocity = mat3(u_ModelMatrix) * targetVelocity * velocity;
+        vec3 targetVelocity = sin(theta) * (cos(phi) * crossX + sin(phi) * crossY) + cos(theta) * vOrigin;
+        targetVelocity *= length(inVelocity[0]);
+
+        out_Position = (u_ModelMatrix * vec4(inPosition[0] + targetVelocity * timeAdjust, 1.0f)).xyz;
+        out_Velocity = mat3(u_ModelMatrix) * targetVelocity;
 
         float lifeScale = rand(mod(vec2(u_DeltaTime, u_Time), vec2(1,1)));
         out_Lifetime = lifeRange.x + (lifeRange.y - lifeRange.x) * lifeScale;
@@ -215,6 +261,10 @@ void main() {
 
         case TYPE_EMITTER_BOX:
             emit_box();
+            return;
+
+        case TYPE_EMITTER_CONE:
+            emit_cone();
             return;
 
         // Handling particles

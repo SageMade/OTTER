@@ -57,6 +57,14 @@ public:
 				glm::vec2 LifeRange;
 				glm::vec3 HalfExtents;
 			} BoxEmitterData;
+			struct {
+				glm::vec3 Velocity;
+				float Timer;
+				float Angle; // In radians
+				glm::vec2 LifeRange;
+				glm::vec2 SizeRange;
+				glm::vec2 Padding2;
+			} ConeEmitterData;
 		};
 	};
 

@@ -4,6 +4,7 @@
 #include "Application/Application.h"
 #include "Utils/ImGuiHelper.h"
 #include "Graphics/DebugDraw.h"
+#include "imgui_internal.h"
 
 ParticleSystem::ParticleSystem() :
 	IComponent(),
@@ -261,7 +262,32 @@ void ParticleSystem::RenderImGui()
 		auto& emitter = _emitters[ix];
 
 		ImGui::PushID(&emitter);
-		if (ImGui::CollapsingHeader("Emitter")) {
+		static char buffer[255];
+		sprintf_s(buffer, "%s###Emitter", (~emitter.Type).c_str());
+		ImGuiID id = ImGui::GetID(buffer);
+		bool open = ImGui::CollapsingHeader(buffer, ImGuiTreeNodeFlags_DefaultOpen | ImGuiTreeNodeFlags_AllowItemOverlap | ImGuiTreeNodeFlags_ClipLabelForTrailingButton);
+
+		int delta = 0;
+		if (ImGuiHelper::HeaderMoveButtons(id, &delta)) {
+			if (delta < 0 && ix > 0) {
+				ParticleData temp = _emitters[ix - 1];
+				_emitters[ix - 1] = _emitters[ix];
+				_emitters[ix] = temp;
+				ImGui::PopID();
+				_needsUpload = true;
+				break;
+			}
+			else if (delta > 0 && ix < _emitters.size() - 1) {
+				ParticleData temp = _emitters[_emitters.size() - 1];
+				_emitters[_emitters.size() - 1] = _emitters[ix];
+				_emitters[ix] = temp;
+				ImGui::PopID();
+				_needsUpload = true;
+				break;
+			}
+		}
+	
+		if (open) {
 
 			_needsUpload |= LABEL_LEFT(ImGui::DragFloat3, "Position  ", &emitter.Position.x, 0.1f);
 			_needsUpload |= LABEL_LEFT(ImGui::ColorEdit4, "Color     ", &emitter.Color.x);
@@ -321,9 +347,9 @@ void ParticleSystem::RenderImGui()
 
 					glm::vec4 pos4 = GetGameObject()->GetTransform() * glm::vec4(emitter.Position, 1.0f);
 					glm::vec3 pos = pos4 / pos4.w;
-					DebugDrawer::Get().DrawCircle(pos, glm::vec3(1.0f, 0.0f, 0.0f), emitter.SphereEmitterData.Radius);
-					DebugDrawer::Get().DrawCircle(pos, glm::vec3(0.0f, 1.0f, 0.0f), emitter.SphereEmitterData.Radius);
-					DebugDrawer::Get().DrawCircle(pos, glm::vec3(0.0f, 0.0f, 1.0f), emitter.SphereEmitterData.Radius);
+					DebugDrawer::Get().DrawWireCircle(pos, glm::vec3(1.0f, 0.0f, 0.0f), emitter.SphereEmitterData.Radius);
+					DebugDrawer::Get().DrawWireCircle(pos, glm::vec3(0.0f, 1.0f, 0.0f), emitter.SphereEmitterData.Radius);
+					DebugDrawer::Get().DrawWireCircle(pos, glm::vec3(0.0f, 0.0f, 1.0f), emitter.SphereEmitterData.Radius);
 				}
 				break;
 			case ParticleType::BoxEmitter:
@@ -345,6 +371,30 @@ void ParticleSystem::RenderImGui()
 				DebugDrawer::Get().DrawWireCube(pos, emitter.BoxEmitterData.HalfExtents);
 			}
 			break;
+			case ParticleType::ConeEmitter:
+			{
+				float spawnRate = 1.0f / emitter.ConeEmitterData.Timer;
+				if (LABEL_LEFT(ImGui::DragFloat, "Spawn Rate", &spawnRate, 0.1f, 0.1f)) {
+					emitter.Lifetime = 1.0f / spawnRate;
+					emitter.ConeEmitterData.Timer = emitter.Lifetime;
+					_needsUpload = true;
+				}
+
+				_needsUpload |= LABEL_LEFT(ImGui::DragFloat3, "Velocity  ", &emitter.ConeEmitterData.Velocity.x, 0.01f);
+				float angleDeg = glm::degrees(emitter.ConeEmitterData.Angle);
+				if (LABEL_LEFT(ImGui::DragFloat, "Angle     ", &angleDeg, 0.01f)) {
+					emitter.ConeEmitterData.Angle = glm::radians(angleDeg);
+					_needsUpload = true;
+				}
+				_needsUpload |= LABEL_LEFT(ImGui::DragFloat2, "Size      ", &emitter.ConeEmitterData.SizeRange.x, 0.1f, 0.01f);
+				_needsUpload |= LABEL_LEFT(ImGui::DragFloat2, "Lifetime  ", &emitter.ConeEmitterData.LifeRange.x, 0.1f, 0.0f);
+
+				glm::vec4 pos4 = GetGameObject()->GetTransform() * glm::vec4(emitter.Position, 1.0f);
+				glm::vec3 pos = pos4 / pos4.w;
+				glm::vec3 dir = glm::mat3(GetGameObject()->GetTransform()) * emitter.ConeEmitterData.Velocity;
+				DebugDrawer::Get().DrawWireCone(pos, dir, glm::degrees(emitter.ConeEmitterData.Angle));
+			}
+			break;
 
 			default:
 				ImGui::Text("Unknown emitter type or no editor available");
@@ -362,7 +412,7 @@ void ParticleSystem::RenderImGui()
 	}
 
 	ImGui::Separator();
-	const char* ComboOptions = "Stream Emitter\0Sphere Emitter\0Box Emitter\0";
+	const char* ComboOptions = "Stream Emitter\0Sphere Emitter\0Box Emitter\0Cone Emitter\0";
 
 	int i = ImGui::GetStateStorage()->GetInt(ImGui::GetID("add_emitter"), 0);
 	if (ImGui::Combo("", &i, ComboOptions)) {
@@ -403,6 +453,15 @@ void ParticleSystem::RenderImGui()
 			emitter.BoxEmitterData.LifeRange   = { 1.0f, 1.0f };
 			emitter.BoxEmitterData.SizeRange   = { 1.0f, 1.0f };
 			emitter.BoxEmitterData.HalfExtents = { 1.0f, 1.0f, 1.0f };
+			_emitters.push_back(emitter);
+			_needsUpload = true;
+		}
+		else if (i == 3) {
+			emitter.Type = ParticleType::ConeEmitter;
+			emitter.ConeEmitterData.Velocity  = glm::vec3(0.0f, 0.0f, 1.0f);
+			emitter.ConeEmitterData.Angle     = glm::radians(30.0f);
+			emitter.ConeEmitterData.LifeRange = { 1.0f, 1.0f };
+			emitter.ConeEmitterData.SizeRange = { 1.0f, 1.0f };
 			_emitters.push_back(emitter);
 			_needsUpload = true;
 		}
