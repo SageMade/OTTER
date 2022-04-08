@@ -18,9 +18,9 @@ layout (location = 7) in vec4 inMetadata2[];
 out flat uint out_Type;
 out flat uint out_TexID;
 out vec3 out_Position;
-out vec3 out_Velocity;
 out vec4 out_Color;
 out float out_Lifetime;
+out vec3 out_Velocity;
 out vec4 out_Metadata;
 out vec4 out_Metadata2;
 
@@ -86,6 +86,10 @@ void emit_stream() {
     int toEmit;
     vec4 meta = inMetadata[0];
     vec4 meta2 = inMetadata2[0];
+    
+    vec3 velocity = inVelocity[0];
+    vec2 lifeRange = meta.zw;
+    vec2 sizeRange = meta2.xy;
 
     prep_emitter(startLife, toEmit);
 
@@ -94,14 +98,56 @@ void emit_stream() {
         float timeAdjust = (-startLife + (ix * meta.x));
         out_Type = TYPE_PARTICLE;
         out_TexID = inTexID[0];
-        out_Position = (u_ModelMatrix * vec4(inPosition[0] + inVelocity[0] * timeAdjust, 1.0f)).xyz;
-        out_Velocity = mat3(u_ModelMatrix) * inVelocity[0];
+        out_Position = (u_ModelMatrix * vec4(inPosition[0] + velocity * timeAdjust, 1.0f)).xyz;
+        out_Velocity = mat3(u_ModelMatrix) * velocity;
 
         float lifeScale = rand(mod(vec2(u_DeltaTime, u_Time), vec2(1,1)));
-        out_Lifetime = meta.z + (meta.w - meta.z) * lifeScale;
+        out_Lifetime = lifeRange.x + (lifeRange.y - lifeRange.x) * lifeScale;
 
         float sizeScale = rand(mod(vec2(u_Time, u_DeltaTime), vec2(1,1)));
-        out_Metadata = vec4(out_Lifetime, meta.y + (meta2.y - meta.x) * sizeScale, 0, 0);
+        out_Metadata = vec4(out_Lifetime, sizeRange.x + (sizeRange.y - meta.x) * sizeScale, 0, 0);
+        
+        out_Metadata2 = vec4(0);
+        out_Color    = inColor[0];
+        
+        EmitVertex();
+        EndPrimitive();
+    }
+}
+
+void emit_box() {
+    float startLife;
+    int toEmit;
+    vec4 meta = inMetadata[0];
+    vec4 meta2 = inMetadata2[0];
+    
+    vec2 sizeRange = meta.yz;
+    vec2 lifeRange = vec2(meta.w, meta2.x);
+    vec3 halfExtents = meta2.yzw;
+
+    prep_emitter(startLife, toEmit);
+
+    // If the lifetime is at 0, we emit a particle
+    for (int ix = 0; ix < toEmit; ix++) {
+        float timeAdjust = (-startLife + (ix * meta.x));
+        out_Type = TYPE_PARTICLE;
+        out_TexID = inTexID[0];
+
+        vec3 relative = vec3(
+            (random(u_Time + 3) * 2 - 1) * halfExtents.x,
+            (random(u_Time + 4) * 2 - 1) * halfExtents.y,
+            (random(u_Time + 5) * 2 - 1) * halfExtents.z
+        );
+        vec3 velocity = normalize(relative) * inVelocity[0];
+
+        out_Position = (u_ModelMatrix * vec4(inPosition[0] + relative + velocity * timeAdjust, 1.0f)).xyz;
+        out_Velocity = mat3(u_ModelMatrix) * velocity;
+
+        float lifeScale = rand(mod(vec2(u_DeltaTime, u_Time), vec2(1,1)));
+        out_Lifetime = lifeRange.x + (lifeRange.y - lifeRange.x) * lifeScale;
+
+        float sizeScale = rand(mod(vec2(u_Time, u_DeltaTime), vec2(1,1)));
+        out_Metadata = vec4(out_Lifetime, sizeRange.x + (sizeRange.y - meta.x) * sizeScale, 0, 0);
         
         out_Metadata2 = vec4(0);
         out_Color    = inColor[0];
@@ -117,6 +163,11 @@ void emit_sphere() {
     vec4 meta = inMetadata[0];
     vec4 meta2 = inMetadata2[0];
 
+    float radius = inVelocity[0].y;
+    float velocity = inVelocity[0].x;
+    vec2 lifeRange = meta.zw;
+    vec2 sizeRange = meta2.xy;
+
     uint seed = uint(u_Time + u_DeltaTime);
 
     prep_emitter(startLife, toEmit);
@@ -128,16 +179,16 @@ void emit_sphere() {
         out_TexID = inTexID[0];
 
         vec3 targetVelocity = point_on_sphere(seed);
-        vec3 targetPos = targetVelocity * random(u_Time + 3);
+        vec3 targetPos = targetVelocity * random(u_Time + 3) * radius;
 
-        out_Position = (u_ModelMatrix * vec4(inPosition[0] + targetPos + targetVelocity *inVelocity[0].x * timeAdjust, 1.0f)).xyz;
-        out_Velocity = mat3(u_ModelMatrix) * targetVelocity * inVelocity[0].x;
+        out_Position = (u_ModelMatrix * vec4(inPosition[0] + targetPos + targetVelocity * velocity * timeAdjust, 1.0f)).xyz;
+        out_Velocity = mat3(u_ModelMatrix) * targetVelocity * velocity;
 
         float lifeScale = rand(mod(vec2(u_DeltaTime, u_Time), vec2(1,1)));
-        out_Lifetime = meta.z + (meta.w - meta.z) * lifeScale;
+        out_Lifetime = lifeRange.x + (lifeRange.y - lifeRange.x) * lifeScale;
 
         float sizeScale = rand(mod(vec2(u_Time, u_DeltaTime), vec2(1,1)));
-        out_Metadata = vec4(out_Lifetime, meta.y + (meta2.y - meta.x) * sizeScale, 0, 0);
+        out_Metadata = vec4(out_Lifetime, sizeRange.x + (sizeRange.y - sizeRange.x) * sizeScale, 0, 0);
 
         out_Metadata2 = vec4(0);
         out_Color    = inColor[0];
@@ -160,6 +211,10 @@ void main() {
 
         case TYPE_EMITTER_SPHERE:
             emit_sphere();
+            return;
+
+        case TYPE_EMITTER_BOX:
+            emit_box();
             return;
 
         // Handling particles

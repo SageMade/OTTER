@@ -77,7 +77,7 @@ namespace Gameplay::Physics {
 		_linearVelocityDirty = true;
 	}
 
-	const glm::vec3& RigidBody::GetLinearVelocity() const {
+	glm::vec3 RigidBody::GetLinearVelocity() const {
 		return ToGlm(_linearVelocity);
 	}
 

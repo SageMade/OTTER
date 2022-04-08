@@ -151,9 +151,9 @@ void Application::_Run()
 	_layers.push_back(std::make_shared<GLAppLayer>());
 	_layers.push_back(std::make_shared<LogicUpdateLayer>());
 	_layers.push_back(std::make_shared<RenderLayer>());
-	_layers.push_back(std::make_shared<ParticleLayer>());
 	_layers.push_back(std::make_shared<PostProcessingLayer>());
-	//_layers.push_back(std::make_shared<InterfaceLayer>());
+	_layers.push_back(std::make_shared<ParticleLayer>());
+	_layers.push_back(std::make_shared<InterfaceLayer>());
 
 	// If we're in editor mode, we add all the editor layers
 	if (_isEditor) {

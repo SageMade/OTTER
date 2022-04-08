@@ -76,7 +76,7 @@ void DebugDrawer::FlushLines()
 		VertexArrayObject::Unbind();
 		_linesVBO->LoadData<VertexPosCol>(_lineBuffer, LINE_BATCH_SIZE * 2);
 		_linesVAO->Bind();
-		_linesVAO->Draw(DrawMode::LineList);
+		glDrawArrays((GLenum)DrawMode::LineList, 0, _lineOffset);
 		_linesVAO->Unbind();
 		_lineOffset = 0;
 		if (restorePoint != 0) {
@@ -119,13 +119,57 @@ void DebugDrawer::FlushTris()
 		VertexArrayObject::Unbind();
 		_trisVBO->LoadData<VertexPosCol>(_triBuffer, TRI_BATCH_SIZE * 3);
 		_trisVAO->Bind();
-		_trisVAO->Draw(DrawMode::LineList);
+		glDrawArrays((GLenum)DrawMode::TriangleList, 0, _triangleOffset);
 		_trisVAO->Unbind();
 		_triangleOffset = 0;
 		if (restorePoint != 0) {
 			glBindVertexArray(restorePoint);
 		}
 	}
+}
+
+void DebugDrawer::DrawCircle(const glm::vec3& pos, const glm::vec3& n, float radius, int segments /*= 24*/)
+{
+	glm::vec3 norm = glm::normalize(n);
+
+	glm::vec3 x = glm::vec3(-norm.y, norm.x, norm.z);
+	if (glm::dot(x, norm) > 0.001f) {
+		x = glm::vec3(-norm.z, norm.x, norm.y);
+	}
+	glm::vec3 y = glm::normalize(glm::cross(n, x));
+
+	float step = glm::two_pi<float>() / segments;
+	for (int ix = 0; ix <= segments; ix++) {
+		glm::vec3 p1 = pos + (glm::cos(ix * step) * x + glm::sin(ix * step) * y) * radius;
+		glm::vec3 p2 = pos + (glm::cos((ix + 1) * step) * x + glm::sin((ix + 1) * step) * y) * radius;
+		DrawLine(p1, p2);
+	}
+}
+
+void DebugDrawer::DrawWireCube(const glm::vec3& center, const glm::vec3& halfExtents)
+{
+	float x1, x2, y1, y2, z1, z2;
+	x1 = center.x - halfExtents.x;
+	x2 = center.x + halfExtents.x;
+	y1 = center.y - halfExtents.y;
+	y2 = center.y + halfExtents.y;
+	z1 = center.z - halfExtents.z;
+	z2 = center.z + halfExtents.z;
+
+	DrawLine(glm::vec3(x1, y1, z1), glm::vec3(x1, y1, z2));
+	DrawLine(glm::vec3(x2, y1, z1), glm::vec3(x2, y1, z2));
+	DrawLine(glm::vec3(x1, y2, z1), glm::vec3(x1, y2, z2));
+	DrawLine(glm::vec3(x2, y2, z1), glm::vec3(x2, y2, z2));
+
+	DrawLine(glm::vec3(x1, y1, z1), glm::vec3(x1, y2, z1));
+	DrawLine(glm::vec3(x1, y1, z2), glm::vec3(x1, y2, z2));
+	DrawLine(glm::vec3(x2, y1, z1), glm::vec3(x2, y2, z1));
+	DrawLine(glm::vec3(x2, y1, z2), glm::vec3(x2, y2, z2));
+
+	DrawLine(glm::vec3(x1, y1, z1), glm::vec3(x2, y1, z1));
+	DrawLine(glm::vec3(x1, y1, z2), glm::vec3(x2, y1, z2));
+	DrawLine(glm::vec3(x1, y2, z1), glm::vec3(x2, y2, z1));
+	DrawLine(glm::vec3(x1, y2, z2), glm::vec3(x2, y2, z2));
 }
 
 void DebugDrawer::FlushAll()

@@ -37,10 +37,10 @@ void ParticleLayer::OnPostRender()
 
 	// Restore viewport to game viewport
 
-	RenderLayer::Sptr renderer = app.GetLayer<RenderLayer>();
-	const Framebuffer::Sptr renderOutput = renderer->GetRenderOutput();
-	renderOutput->Bind();
-	glViewport(0, 0, renderOutput->GetWidth(), renderOutput->GetHeight());
+	//RenderLayer::Sptr renderer = app.GetLayer<RenderLayer>();
+	//const Framebuffer::Sptr renderOutput = renderer->GetRenderOutput();
+	//renderOutput->Bind();
+	//glViewport(0, 0, renderOutput->GetWidth(), renderOutput->GetHeight());
 
 	Application::Get().CurrentScene()->Components().Each<ParticleSystem>([](const ParticleSystem::Sptr& system) {
 		if (system->IsEnabled) {
@@ -48,5 +48,5 @@ void ParticleLayer::OnPostRender()
 		}
 	});
 
-	renderer->GetRenderOutput()->Unbind();
+	//renderer->GetRenderOutput()->Unbind();
 }

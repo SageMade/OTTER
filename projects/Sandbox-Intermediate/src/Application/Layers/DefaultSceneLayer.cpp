@@ -597,7 +597,7 @@ void DefaultSceneLayer::_CreateScene()
 		{
 			RectTransform::Sptr transform = canvas->Add<RectTransform>();
 			transform->SetMin({ 16, 16 });
-			transform->SetMax({ 256, 256 });
+			transform->SetMax({ 128, 128 });
 
 			GuiPanel::Sptr canPanel = canvas->Add<GuiPanel>();
 
@@ -606,7 +606,7 @@ void DefaultSceneLayer::_CreateScene()
 			{
 				RectTransform::Sptr transform = subPanel->Add<RectTransform>();
 				transform->SetMin({ 10, 10 });
-				transform->SetMax({ 128, 128 });
+				transform->SetMax({ 64, 64 });
 
 				GuiPanel::Sptr panel = subPanel->Add<GuiPanel>();
 				panel->SetColor(glm::vec4(1.0f, 0.0f, 0.0f, 1.0f));
@@ -629,9 +629,24 @@ void DefaultSceneLayer::_CreateScene()
 
 		GameObject::Sptr particles = scene->CreateGameObject("Particles"); 
 		{
+			particles->SetPostion({ -2.0f, 0.0f, 2.0f });
+
 			ParticleSystem::Sptr particleManager = particles->Add<ParticleSystem>();  
 			particleManager->Atlas = ResourceManager::CreateAsset<Texture2DArray>("textures/particles.png", 2, 2);
-			particleManager->AddEmitter(glm::vec3(0.0f), glm::vec3(0.0f, -1.0f, 10.0f), 10.0f, glm::vec4(0.0f, 1.0f, 0.0f, 1.0f)); 
+
+			ParticleSystem::ParticleData emitter;
+			emitter.Type = ParticleType::SphereEmitter;
+			emitter.TexID = 2;
+			emitter.Position = glm::vec3(0.0f);
+			emitter.Color = glm::vec4(0.5f, 0.5f, 0.5f, 1.0f);
+			emitter.Lifetime = 0.0f;
+			emitter.SphereEmitterData.Timer = 1.0f / 50.0f;
+			emitter.SphereEmitterData.Velocity = 0.5f;
+			emitter.SphereEmitterData.LifeRange = { 1.0f, 4.0f };
+			emitter.SphereEmitterData.Radius = 1.0f;
+			emitter.SphereEmitterData.SizeRange = { 0.5f, 1.5f };
+
+			particleManager->AddEmitter(emitter);
 		}
 
 		GuiBatcher::SetDefaultTexture(ResourceManager::CreateAsset<Texture2D>("textures/ui-sprite.png"));

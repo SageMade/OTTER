@@ -24,7 +24,7 @@ const uint EMITTER_MASK = 0x0000FFFF;
 void main() {
     
     // If the particle type is an emitter, we can skip it
-	if ((inType[0] & EMITTER_MASK) != 0) {
+	if ((inType[0] & EMITTER_MASK) == inType[0]) {
 		return;
 	}
 
@@ -52,19 +52,19 @@ void main() {
     vec3 bl = inPosition[0] + ( right - up ) * size / 2;
     vec3 br = inPosition[0] + ( right + up ) * size / 2;
 
-    outUV = vec2(0, 0);
+    outUV = vec2(0, 1);
     gl_Position = u_ViewProjection * vec4(tr, 1);    
     EmitVertex();
 
-    outUV = vec2(0, 1);
+    outUV = vec2(0, 0);
     gl_Position = u_ViewProjection * vec4(tl, 1);    
     EmitVertex();
     
-    outUV = vec2(1, 0);
+    outUV = vec2(1, 1);
     gl_Position = u_ViewProjection * vec4(br, 1);   
     EmitVertex();
     
-    outUV = vec2(1, 1);
+    outUV = vec2(1, 0);
     gl_Position = u_ViewProjection * vec4(bl, 1);  
     EmitVertex();
 

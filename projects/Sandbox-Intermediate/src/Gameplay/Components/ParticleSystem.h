@@ -15,37 +15,71 @@ class ParticleSystem : public Gameplay::IComponent{
 public:
 	MAKE_PTRS(ParticleSystem);
 
+	struct ParticleData {
+		ParticleType Type;     // uint32_t, lower 16 bits for emitters, upper 16 for particles
+		uint32_t     TexID;
+		glm::vec3    Position;
+		glm::vec4    Color;
+		float        Lifetime; // For emitters, this is the time to next particle spawn
+
+		union {
+			float EmitterData[3 + 4 + 4];
+			struct {
+				glm::vec3    Velocity; // For emitters, this is initial velocity
+				// For emitters, x is time to next particle, y is max deviation from direction in radians, z-w is lifetime range
+				glm::vec4    Metadata;
+				glm::vec4    Metadata2;
+			};
+			struct {
+				glm::vec3 Velocity;
+				float Timer;
+				float Padding;
+				glm::vec2 LifeRange;
+				glm::vec2 SizeRange;
+				glm::vec2 Padding2;
+			} StreamEmitterData;
+			struct {
+				float Velocity;
+				float Radius;
+				float Padding;
+				float Timer;
+				float Padding2;
+				glm::vec2 LifeRange;
+				glm::vec2 SizeRange;
+				glm::vec2 Padding3;
+			} SphereEmitterData;
+			struct {
+				glm::vec3 Velocity;
+				float Timer;
+				glm::vec2 SizeRange;
+				glm::vec2 LifeRange;
+				glm::vec3 HalfExtents;
+			} BoxEmitterData;
+		};
+	};
+
 	ParticleSystem();
 	~ParticleSystem();
 
 	void Update();
 	void Render();
 
+	void Reset();
+
 	Texture2DArray::Sptr Atlas;
 
-	void AddEmitter(const glm::vec3& position, const glm::vec3& direction, float emitRate = 1.0f, const glm::vec4& color = glm::vec4(1.0f), float size = 0.5f);
+	void AddEmitter(const ParticleData& emitter);
 
 	// Inherited from IComponent
 
 	virtual void RenderImGui() override;
+	virtual void OnLoad() override;
 	virtual void Awake() override;
 	virtual nlohmann::json ToJson() const override;
 	static ParticleSystem::Sptr FromJson(const nlohmann::json& blob);
 	MAKE_TYPENAME(ParticleSystem);
 
 protected:
-	struct ParticleData {
-		ParticleType Type;     // uint32_t, lower 16 bits for emitters, upper 16 for particles
-		uint32_t     TexID;
-		glm::vec3    Position;
-		glm::vec3    Velocity; // For emitters, this is initial velocity
-		glm::vec4    Color;
-		float        Lifetime; // For emitters, this is the time to next particle spawn
-
-		// For emitters, x is time to next particle, y is max deviation from direction in radians, z-w is lifetime range
-		glm::vec4    Metadata;
-		glm::vec4    Metadata2;
-	};
 
 	bool _hasInit;
 	bool _needsUpload;

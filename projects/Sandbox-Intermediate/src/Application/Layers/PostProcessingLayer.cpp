@@ -121,7 +121,15 @@ void PostProcessingLayer::OnPostRender()
 		MagFilter::Linear
 	);
 
-	current->Unbind();
+	gBuffer->Bind(FramebufferBinding::Read);
+	current->Blit(
+		{ 0, 0, gBuffer->GetWidth(), gBuffer->GetHeight() },
+		{ viewport.x, viewport.y, viewport.x + viewport.z, viewport.y + viewport.w },
+		BufferFlags::Depth,
+		MagFilter::Nearest
+	);
+
+	gBuffer->Unbind();
 }
 
 void PostProcessingLayer::OnSceneLoad()
