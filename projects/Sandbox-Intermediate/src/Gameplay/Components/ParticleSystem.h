@@ -15,6 +15,8 @@ class ParticleSystem : public Gameplay::IComponent{
 public:
 	MAKE_PTRS(ParticleSystem);
 
+	glm::vec3 _gravity;
+
 	struct ParticleData {
 		ParticleType Type;     // uint32_t, lower 16 bits for emitters, upper 16 for particles
 		uint32_t     TexID;
@@ -66,6 +68,9 @@ public:
 
 	void Reset();
 
+	void SetMaxParticles(uint32_t value);
+	uint32_t GetMaxParticles() const;
+
 	Texture2DArray::Sptr Atlas;
 
 	void AddEmitter(const ParticleData& emitter);
@@ -98,7 +103,6 @@ protected:
 
 	ShaderProgram::Sptr _updateShader;
 	ShaderProgram::Sptr _renderShader;
-	glm::vec3           _gravity;
 
 	std::vector<ParticleData> _emitters;
 };

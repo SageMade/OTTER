@@ -73,6 +73,7 @@
 #include "Application/Layers/ImGuiDebugLayer.h"
 #include "Application/Windows/DebugWindow.h"
 #include "Gameplay/Components/ShadowCamera.h"
+#include "Gameplay/Components/ShipMoveBehaviour.h"
 
 DefaultSceneLayer::DefaultSceneLayer() :
 	ApplicationLayer()
@@ -152,6 +153,8 @@ void DefaultSceneLayer::_CreateScene()
 		ResourceManager::CreateAsset<Texture2D>("textures/flashlight.png");
 		ResourceManager::CreateAsset<Texture2D>("textures/flashlight-2.png");
 		ResourceManager::CreateAsset<Texture2D>("textures/light_projection.png");
+
+		Texture2DArray::Sptr particleTex = ResourceManager::CreateAsset<Texture2DArray>("textures/particles.png", 2, 2);
 
 		//DebugWindow::Sptr debugWindow = app.GetLayer<ImGuiDebugLayer>()->GetWindow<DebugWindow>();
 
@@ -443,6 +446,47 @@ void DefaultSceneLayer::_CreateScene()
 			RenderComponent::Sptr renderer = ship->Add<RenderComponent>();
 			renderer->SetMesh(shipMesh);
 			renderer->SetMaterial(grey);
+
+			GameObject::Sptr particles = scene->CreateGameObject("Particles");
+			ship->AddChild(particles);
+			particles->SetPostion({ 0.0f, -7.0f, 0.0f});
+
+			ParticleSystem::Sptr particleManager = particles->Add<ParticleSystem>();
+			particleManager->Atlas = particleTex;
+
+			particleManager->_gravity = glm::vec3(0.0f);
+
+			ParticleSystem::ParticleData emitter;
+			emitter.Type = ParticleType::SphereEmitter;
+			emitter.TexID = 2;
+			emitter.Position = glm::vec3(0.0f);
+			emitter.Color = glm::vec4(0.5f, 0.5f, 0.5f, 1.0f);
+			emitter.Lifetime = 1.0f / 50.0f;
+			emitter.SphereEmitterData.Timer = 1.0f / 50.0f;
+			emitter.SphereEmitterData.Velocity = 0.5f;
+			emitter.SphereEmitterData.LifeRange = { 1.0f, 3.0f };
+			emitter.SphereEmitterData.Radius = 0.5f;
+			emitter.SphereEmitterData.SizeRange = { 0.5f, 1.0f };
+
+			ParticleSystem::ParticleData emitter2;
+			emitter2.Type = ParticleType::SphereEmitter;
+			emitter2.TexID = 2;
+			emitter2.Position = glm::vec3(0.0f);
+			emitter2.Color = glm::vec4(1.0f, 0.5f, 0.0f, 1.0f);
+			emitter2.Lifetime = 1.0f / 40.0f;
+			emitter2.SphereEmitterData.Timer = 1.0f / 40.0f;
+			emitter2.SphereEmitterData.Velocity = 0.1f;
+			emitter2.SphereEmitterData.LifeRange = { 0.5f, 1.0f };
+			emitter2.SphereEmitterData.Radius = 0.25f;
+			emitter2.SphereEmitterData.SizeRange = { 0.25f, 0.5f };
+
+			particleManager->AddEmitter(emitter);
+			particleManager->AddEmitter(emitter2);
+
+			ShipMoveBehaviour::Sptr move = ship->Add<ShipMoveBehaviour>();
+			move->Center = glm::vec3(0.0f, 0.0f, 4.0f);
+			move->Speed = 180.0f;
+			move->Radius = 6.0f;
 		}
 
 		GameObject::Sptr demoBase = scene->CreateGameObject("Demo Parent");
@@ -632,7 +676,7 @@ void DefaultSceneLayer::_CreateScene()
 			particles->SetPostion({ -2.0f, 0.0f, 2.0f });
 
 			ParticleSystem::Sptr particleManager = particles->Add<ParticleSystem>();  
-			particleManager->Atlas = ResourceManager::CreateAsset<Texture2DArray>("textures/particles.png", 2, 2);
+			particleManager->Atlas = particleTex;
 
 			ParticleSystem::ParticleData emitter;
 			emitter.Type = ParticleType::SphereEmitter;

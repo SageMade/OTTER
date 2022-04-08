@@ -108,8 +108,8 @@ void ParticleSystem::Update()
 		glBindVertexArray(0);
 
 		// Allocate some temp space for particles, so we can init the emitters
-		size_t dataSize = (_maxParticles + _emitters.size()) * sizeof(ParticleData);
-		ParticleData* data = new ParticleData[_maxParticles + _emitters.size()];
+		size_t dataSize = (_emitters.size()) * sizeof(ParticleData);
+		ParticleData* data = new ParticleData[_emitters.size()];
 		memset(data, 0, dataSize);
 
 		// Add all emitter to the the particle list at the beginning
@@ -117,8 +117,9 @@ void ParticleSystem::Update()
 			data[ix] = _emitters[ix];
 		}
 
+		// Update just the first few elements, we'll restart transform feedback with it
 		for (int ix = 0; ix < 2; ix++) {
-			glNamedBufferData(_particleBuffers[ix], dataSize, data, GL_DYNAMIC_DRAW);
+			glNamedBufferSubData(_particleBuffers[ix], 0, dataSize, data);
 		}
 
 		// We no longer need the CPU copy
@@ -127,7 +128,6 @@ void ParticleSystem::Update()
 
 	// Disable rasterization, this is update only
 	glEnable(GL_RASTERIZER_DISCARD);
-
 
 	// Bind the update shader and send our relevant uniforms
 	_updateShader->Bind();
@@ -143,7 +143,8 @@ void ParticleSystem::Update()
 	glBeginQuery(GL_TRANSFORM_FEEDBACK_PRIMITIVES_WRITTEN, _query); 
 	glBeginTransformFeedback(GL_POINTS);
 
-	// If this is our first pass, we use drawArrays to get the initial state, otherwise we use transform feedback for rendering
+	// If this is our first pass, or we have fresh emitter data, we use drawArrays 
+	// to get the initial state, otherwise we use transform feedback for updating
 	if (!_hasInit || _needsUpload ) {
 		glDrawArrays(GL_POINTS, 0, _emitters.size());
 	}
@@ -219,6 +220,16 @@ void ParticleSystem::Reset() {
 	_needsUpload = true;
 }
 
+void ParticleSystem::SetMaxParticles(uint32_t value)
+{
+	_maxParticles = value;
+	_needsUpload = true;
+}
+
+uint32_t ParticleSystem::GetMaxParticles() const {
+	return _maxParticles;
+}
+
 void ParticleSystem::AddEmitter(const ParticleData& emitter)
 {
 	_emitters.push_back(emitter); 
@@ -230,6 +241,10 @@ void ParticleSystem::RenderImGui()
 	LABEL_LEFT(ImGui::LabelText, "Particle Count", "%u", _numParticles);
 
 	Application& app = Application::Get();
+
+	LABEL_LEFT(ImGui::DragFloat3, "Gravity", &_gravity.x, 0.01f);
+	uint32_t minParticles = _emitters.size();
+	_needsUpload |= LABEL_LEFT(ImGui::DragScalarN, "Max Particles", ImGuiDataType_U32, &_maxParticles, 1, 10.0f, &minParticles);
 
 	ImGui::Separator();
 	ImGui::Text("Emitters:");
