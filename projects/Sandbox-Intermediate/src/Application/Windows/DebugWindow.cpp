@@ -24,17 +24,23 @@ void DebugWindow::RenderMenuBar()
 		app.CurrentScene()->SetPhysicsDebugDrawMode(physicsDrawMode);
 	}
 
-	/*ImGui::Separator();
+	ImGui::Separator();
 
 	RenderFlags flags = renderLayer->GetRenderFlags();
 	bool changed = false;
-	bool temp = *(flags & RenderFlags::EnableColorCorrection);
-	if (ImGui::Checkbox("Enable Color Correction", &temp)) {
+	bool temp = *(flags & RenderFlags::EnableLights);
+	if (ImGui::Checkbox("Enable Lights", &temp)) {
 		changed = true;
-		flags = (flags & ~*RenderFlags::EnableColorCorrection) | (temp ? RenderFlags::EnableColorCorrection : RenderFlags::None);
+		flags = (flags & ~*RenderFlags::EnableLights) | (temp ? RenderFlags::EnableLights : RenderFlags::None);
+	}
+
+	temp = *(flags & RenderFlags::EnableShadows);
+	if (ImGui::Checkbox("Enable Shadows", &temp)) {
+		changed = true;
+		flags = (flags & ~*RenderFlags::EnableShadows) | (temp ? RenderFlags::EnableShadows : RenderFlags::None);
 	}
 
 	if (changed) {
 		renderLayer->SetRenderFlags(flags);
-	}*/
+	}
 }

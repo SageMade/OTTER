@@ -20,7 +20,8 @@ ParticleSystem::ParticleSystem() :
 	_renderShader(nullptr),
 	_gravity({ 0, 0, -9.81f }),
 	_emitters(),
-	_needsUpload(true)
+	_needsUpload(true),
+	_needsResize(false)
 { }
 
 ParticleSystem::~ParticleSystem()
@@ -103,6 +104,14 @@ void ParticleSystem::Update()
 
 		// We create a query object to track the number of particles we're simulating
 		glGenQueries(1, &_query);
+	}
+
+	if (_needsResize) {
+		size_t dataSize = (_maxParticles + _emitters.size()) * sizeof(ParticleData);
+		glNamedBufferData(_particleBuffers[0], dataSize, nullptr, GL_DYNAMIC_DRAW);
+		glNamedBufferData(_particleBuffers[1], dataSize, nullptr, GL_DYNAMIC_DRAW);
+		_needsUpload = true;
+		_needsResize = false;
 	}
 
 	if (_needsUpload) {
@@ -225,6 +234,7 @@ void ParticleSystem::SetMaxParticles(uint32_t value)
 {
 	_maxParticles = value;
 	_needsUpload = true;
+	_needsResize = true;
 }
 
 uint32_t ParticleSystem::GetMaxParticles() const {
@@ -245,7 +255,7 @@ void ParticleSystem::RenderImGui()
 
 	LABEL_LEFT(ImGui::DragFloat3, "Gravity", &_gravity.x, 0.01f);
 	uint32_t minParticles = _emitters.size();
-	_needsUpload |= LABEL_LEFT(ImGui::DragScalarN, "Max Particles", ImGuiDataType_U32, &_maxParticles, 1, 10.0f, &minParticles);
+	_needsResize |= LABEL_LEFT(ImGui::DragScalarN, "Max Particles", ImGuiDataType_U32, &_maxParticles, 1, 10.0f, &minParticles);
 
 	ImGui::Separator();
 	ImGui::Text("Emitters:");
@@ -255,7 +265,6 @@ void ParticleSystem::RenderImGui()
 			Atlas = std::make_shared<Texture2DArray>("textures/particles.png", 2, 2);
 		}
 	}
-
 
 	// We can't add or edit emitters once the system has started
 	for (int ix = 0; ix < _emitters.size(); ix++) {

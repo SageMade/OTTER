@@ -96,6 +96,7 @@ protected:
 
 	bool _hasInit;
 	bool _needsUpload;
+	bool _needsResize;
 
 	uint32_t _maxParticles;
 	GLuint _numParticles;

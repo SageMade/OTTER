@@ -1,8 +1,10 @@
 #version 440
 
+#define MAX_VERTS_OUT 33
+
 layout (points) in;
 layout (points) out;
-layout (max_vertices = 32) out;
+layout (max_vertices = MAX_VERTS_OUT) out;
 
 // Define inputs to match the vertex shader
 layout (location = 0) in flat uint inType[];
@@ -61,7 +63,7 @@ void prep_emitter(out float startLife, out int toEmit) {
     startLife = lifetime;
     toEmit = 0;
     
-    while ((lifetime < 0) && (emitted < 32)) {
+    while ((lifetime < 0) && (emitted < MAX_VERTS_OUT)) {
         lifetime += meta.x;
         toEmit ++;
         emitted++;
