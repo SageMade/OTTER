@@ -12,6 +12,8 @@
 #include "Utils/ImGuiHelper.h"
 
 #include "Gameplay/Scene.h"
+#include "Components/GUI/RectTransform.h"
+#include "Graphics/GuiBatcher.h"
 
 namespace Gameplay {
 	GameObject::GameObject() :
@@ -179,23 +181,31 @@ namespace Gameplay {
 			_children.erase(it);
 		}
 
-		for (auto& component : _components) {
-			if (component->IsEnabled) {
-				component->StartGUI();
+		RectTransform::Sptr rect = Get<RectTransform>();
+
+		if (rect != nullptr) {
+			GuiBatcher::PushModelTransform(rect->GetLocalTransform());
+
+			for (auto& component : _components) {
+				if (component->IsEnabled) {
+					component->StartGUI();
+				}
 			}
-		}
-		for (auto& component : _components) {
-			if (component->IsEnabled) {
-				component->RenderGUI();
+			for (auto& component : _components) {
+				if (component->IsEnabled) {
+					component->RenderGUI();
+				}
 			}
-		}
-		for (auto& child : _children) {
-			child->RenderGUI();
-		}
-		for (auto& component : _components) {
-			if (component->IsEnabled) {
-				component->FinishGUI();
+			for (auto& child : _children) {
+				child->RenderGUI();
 			}
+			for (auto& component : _components) {
+				if (component->IsEnabled) {
+					component->FinishGUI();
+				}
+			}
+
+			GuiBatcher::PopModelTransform();
 		}
 	}
 
